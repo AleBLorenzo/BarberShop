@@ -36,3 +36,5 @@ build/
 # Env files
 .env
 !.env.example
+
+*.db
