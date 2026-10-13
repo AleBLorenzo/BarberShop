@@ -1,0 +1,22 @@
+# TheTankBarber
+
+> Barbería en Av. Antonio Dominguez, 20, 38650 Arona, Santa Cruz de Tenerife.
+> Reserva de citas online con cita previa. Horario: lunes a sábado de 9:00 a 20:00,
+> domingos cerrado.
+
+The Tank Barber es una barbería moderna en Tenerife, creada para ofrecer una experiencia
+diferente, profesional y cercana. Nos especializamos en cortes de cabello, degradados,
+arreglos de barba y estilos personalizados, cuidando cada detalle para que cada cliente
+salga con el estilo que busca.
+
+## Páginas públicas
+
+- [Inicio](/): landing con servicios, resultados, reseñas e información del negocio.
+- [Reservar cita](/reservar/servicio): flujo público de reserva (servicio → fecha y hora → confirmación).
+- [Acceso](/login): acceso para clientes, trabajadores y administración.
+
+## Contacto
+
+- Email: richelbarber2024@gmail.com
+- Teléfono: 653 812 324
+- [Ubicación (Google Maps)](https://maps.app.goo.gl/12BLsdYKtLRCxFRe8)

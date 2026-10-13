@@ -1,0 +1,26 @@
+# TheTankBarber — robots.txt
+# ----------------------------------------------------------------------------
+# ACTUALIZAR al añadir/quitar rutas públicas: ver frontend/src/routes/AppRoutes.jsx
+# El dominio de la directiva Sitemap debe coincidir con la base URL del frontend
+# (misma convención que app.frontend.base-url en backend/.env → application.properties).
+# ----------------------------------------------------------------------------
+
+User-agent: *
+# Entrada pública del flujo de reserva (indexable — ver sitemap.xml)
+Allow: /reservar/servicio
+
+# Paneles privados
+Disallow: /admin
+Disallow: /trabajador
+
+# Zonas con sesión o datos privados
+Disallow: /login
+Disallow: /mis-citas
+
+# URLs con token de cancelación/reprogramación: nunca indexar (filtra tokens)
+Disallow: /reprogramar/
+
+# Pasos con estado del flujo de reserva (excepto la entrada pública de arriba)
+Disallow: /reservar/
+
+Sitemap: https://TU-DOMINIO.example/sitemap.xml
