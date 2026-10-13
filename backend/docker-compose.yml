@@ -1,0 +1,33 @@
+# BarberShop — base de datos de DESARROLLO (PostgreSQL)
+#
+# Uso:  docker compose up -d       (desde backend/)
+#       docker compose down        (para; los datos persisten en el volumen)
+#
+# Credenciales por defecto = mismas que el perfil `dev` del backend
+# (application-dev.properties). SOLO son credenciales locales de desarrollo,
+# no secretos de producción (los reales viven en /etc/barbershop/barbershop.env
+# en la VM, fuera de git).
+#
+# Nota: si ya tienes un PostgreSQL nativo ocupando el puerto 5432 no necesitas
+# este compose (el backend usará ese). O bien mapea otro puerto cambiando
+# "5432:5432" por "5433:5432" y define SPRING_DATASOURCE_URL con ese puerto.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: barbershop-postgres
+    environment:
+      POSTGRES_DB: barbershop
+      POSTGRES_USER: barbershop
+      POSTGRES_PASSWORD: barbershop
+    ports:
+      - "5432:5432"
+    volumes:
+      - barbershop-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U barbershop -d barbershop"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  barbershop-pgdata:

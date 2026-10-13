@@ -1,0 +1,4 @@
+# Registra el cargador de backend/.env (KEY=VALUE, no commiteado) como
+# EnvironmentPostProcessor. Ver DotenvEnvironmentPostProcessor.
+org.springframework.boot.env.EnvironmentPostProcessor=\
+com.barbershop.backend.config.DotenvEnvironmentPostProcessor

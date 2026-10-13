@@ -15,7 +15,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class CorsConfig {
 
     @Bean
-    CorsConfigurationSource corsConfigurationSource(
+    // público para que el test de fail-fast (CorsAllowlistTest) pueda invocarlo
+    // directamente desde el paquete de tests de seguridad
+    public CorsConfigurationSource corsConfigurationSource(
             @Value("${app.cors.allowed-origins}") String allowedOrigins) {
         List<String> origins = Arrays.stream(StringUtils.commaDelimitedListToStringArray(allowedOrigins))
                 .map(origin -> origin == null ? "" : origin.trim())
