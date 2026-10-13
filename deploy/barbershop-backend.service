@@ -1,0 +1,41 @@
+# BarberShop — backend Spring Boot (unidad systemd)
+#
+# Instalación:
+#   sudo cp deploy/barbershop-backend.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now barbershop-backend
+#
+# Requisitos previos (ver deploy/README.md):
+#   - Java 21 instalado (/usr/bin/java)
+#   - Repo clonado en /opt/barbershop y backend construido (./mvnw package)
+#   - /etc/barbershop/barbershop.env con credenciales (chmod 600, nunca en git)
+
+[Unit]
+Description=BarberShop backend (Spring Boot)
+Wants=network-online.target
+After=network-online.target postgresql.service
+
+[Service]
+Type=simple
+# Usuario con el que corre el proceso (por defecto, el de la imagen Ubuntu de
+# Oracle; cámbialo si creaste un usuario dedicado).
+User=ubuntu
+WorkingDirectory=/opt/barbershop/backend
+# Credenciales y config de producción: MAIL_*, JWT_SECRET, SEED_ADMIN_*,
+# SPRING_DATASOURCE_* — fuera de git, solo lectura para root/owner (chmod 600).
+EnvironmentFile=/etc/barbershop/barbershop.env
+# Seguro por si el fichero no define el perfil:
+Environment=SPRING_PROFILES_ACTIVE=prod
+# Garantiza el directorio de fotos (idempotente, -p). La BD es PostgreSQL
+# (servicio del sistema): ya no hay directorio de datos H2.
+ExecStartPre=/bin/mkdir -p /opt/barbershop/backend/uploads
+# Micro Always Free con 1 GB de RAM: limitar la heap del JVM.
+ExecStart=/usr/bin/java -Xmx512m -jar /opt/barbershop/backend/target/backend-0.0.1-SNAPSHOT.jar
+Restart=always
+RestartSec=5
+# Logs en el journal: journalctl -u barbershop-backend -f
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
