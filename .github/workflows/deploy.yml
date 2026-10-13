@@ -1,0 +1,103 @@
+name: Deploy
+
+# Despliegue por versiones: un tag v* -> build -> VM -> health check -> Release.
+# Flujo:  git tag v1.0.0 && git push origin v1.0.0
+#
+# Secrets requeridos (Settings → Secrets and variables → Actions):
+#   VM_HOST   IP pública de la VM (p. ej. 74.208.73.131)
+#   VM_USER   usuario SSH (normalmente "ubuntu")
+#   VM_SSH_KEY clave privada SSH completa (sin passphrase)
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch: # lanzamiento manual desde la pestaña Actions
+
+# Un despliegue cada vez; no cancelar el que está en marcha.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Repo público: jamás desplegar desde un fork.
+    if: github.repository_owner == 'AleBLorenzo'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Backend — empaquetar jar
+        run: ./mvnw -B -DskipTests package
+        working-directory: backend
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Frontend — lint y build (VITE_API_BASE_URL=/api, mismo origen)
+        run: |
+          npm ci
+          npm run lint
+          VITE_API_BASE_URL=/api npm run build
+        working-directory: frontend
+
+      - name: Preparar artefactos del release
+        run: |
+          mkdir -p release
+          cp backend/target/backend-0.0.1-SNAPSHOT.jar release/backend.jar
+          tar -czf release/dist.tar.gz -C frontend/dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: release/
+          retention-days: 7
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'AleBLorenzo'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: release
+
+      - name: Configurar SSH hacia la VM
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VM_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts
+
+      - name: Subir artefactos y script a la VM
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+        run: |
+          scp release/backend.jar release/dist.tar.gz deploy/deploy-release.sh \
+            "$VM_USER@$VM_HOST:/tmp/"
+
+      - name: Instalar release y reiniciar (con health check)
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+        run: |
+          ssh "$VM_USER@$VM_HOST" "sudo bash /tmp/deploy-release.sh"
+
+      - name: GitHub Release con notas de la versión
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true

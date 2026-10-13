@@ -166,7 +166,10 @@ export default function Landing() {
         <span className="hero-deco hero-deco--spark hero-deco--spark4" style={{ '--dx': '55' }} aria-hidden="true">
           <LuSparkles />
         </span>
-        <h1>{NOMBRE}</h1>
+        <h1>
+          <span className="sr-only">{NOMBRE}</span>
+          <img src="/logo-wordmark.webp" alt="" aria-hidden="true" />
+        </h1>
         <Link to="/reservar/servicio" className="btn btn-primary btn-lg">
           Reservar Cita
           <LuArrowRight aria-hidden="true" />

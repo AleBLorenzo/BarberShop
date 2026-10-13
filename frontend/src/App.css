@@ -161,6 +161,19 @@ img {
   overflow: hidden;            /* el fondo queda encuadrado dentro de la tarjeta */
 }
 
+/* Texto visible solo para lectores de pantalla (el título es la imagen del logo) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .landing-hero h1 {
   font-size: var(--font-size-3xl);
   margin: 0 0 var(--space-sm);
@@ -168,6 +181,23 @@ img {
   font-weight: 600;
   line-height: 1.1;
   letter-spacing: var(--tracking-display);
+}
+
+/* Título = wordmark (THE TANK BARBER) con la misma lógica de tinta que la
+   marca de agua: el arte negro se invierte a blanco sobre el hero oscuro del
+   tema claro; en tema oscuro (hero claro) va tal cual. */
+.landing-hero h1 img {
+  display: block;
+  width: min(560px, 88vw);
+  height: auto;
+  margin: 0 auto;
+  filter: invert(1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .landing-hero h1 img {
+    filter: none;
+  }
 }
 
 /* Móvil: el display de 48px ocupa demasiado en 360–414px */
@@ -202,27 +232,6 @@ img {
 
 .landing-hero .btn:focus-visible {
   outline-color: var(--bg);   /* anillo visible: en claro accent = negro sobre hero negro */
-}
-
-/* Logo (versión con texto) a sangre en toda la barra del hero: imagen de
-   fondo transparente con contain (encuadrado, sin recortes). invert(1) pasa
-   el arte negro a blanco sobre el hero negro del tema claro; en oscuro
-   (hero claro) va sin invertir. El icono circular queda para la cabecera. */
-.landing-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: url('/logo-wordmark.webp') no-repeat center / contain;
-  filter: invert(1);
-  opacity: 0.32;
-  pointer-events: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  .landing-hero::before {
-    filter: none;   /* hero claro en oscuro: el arte negro se ve tal cual */
-  }
 }
 
 .section-title {
@@ -1806,37 +1815,10 @@ html {
   translate: none;
 }
 
-/* ---------- Entrada del hero al cargar (logo → título → párrafo → CTA) ---------- */
-.landing-hero::before {
-  animation: hero-fade 1.1s var(--ease-out-expo) 0.35s backwards;
-  /* Parallax de ratón: la transición larga retargetea en cada movimiento
-     y produce el efecto muelle del sitio de referencia (useSpring) */
-  transform: translate3d(calc(var(--hero-mx, 0) * -30px), calc(var(--hero-my, 0) * -18px), 0);
-  transition: transform 0.9s var(--ease-out-expo);
-}
-
+/* El título es ahora la imagen del wordmark: la animación de entrada
+   (hero-blur-up) se mantiene en el h1; el «shine» de texto se retiró. */
 .landing-hero h1 {
   animation: hero-blur-up 0.95s var(--ease-out-expo) 0.7s backwards;
-}
-
-/* Shine: banda monocroma (texto base al 70%, banda al 100%) que recorre el
-   título — adaptación sin color del gradiente dorado del sitio de referencia */
-@supports ((background-clip: text) and (color: color-mix(in srgb, red 50%, transparent))) {
-  .landing-hero h1 {
-    background-image: linear-gradient(
-      110deg,
-      color-mix(in srgb, currentColor 70%, transparent) 38%,
-      currentColor 50%,
-      color-mix(in srgb, currentColor 70%, transparent) 62%
-    );
-    background-size: 200% 100%;
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation:
-      hero-blur-up 0.95s var(--ease-out-expo) 0.7s backwards,
-      shine 6s ease-in-out 2.6s infinite;
-  }
 }
 
 .landing-hero p {
@@ -2039,10 +2021,6 @@ html {
 }
 
 /* ---------- Keyframes ---------- */
-@keyframes hero-fade {
-  from { opacity: 0; }
-}
-
 @keyframes hero-fade-up {
   from {
     opacity: 0;
@@ -2060,11 +2038,6 @@ html {
 
 @keyframes deco-in {
   from { opacity: 0; }
-}
-
-@keyframes shine {
-  0%, 100% { background-position: 200% 0; }
-  50% { background-position: -50% 0; }
 }
 
 @keyframes spin-slow {
