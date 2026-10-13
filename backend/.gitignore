@@ -38,3 +38,10 @@ build/
 !.env.example
 
 *.db
+
+# BD H2 en fichero (histórico; la app usa PostgreSQL desde la migración
+# migrate-h2-to-postgresql) — nunca en git
+data/
+
+# Fotos locales subidas (ver app.uploads.dir)
+uploads/

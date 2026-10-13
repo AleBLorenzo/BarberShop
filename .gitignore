@@ -1,0 +1,17 @@
+# Raíz del repositorio BarberShop
+# (backend/.gitignore y frontend/.gitignore complementan este archivo)
+
+# Secretos: nunca commitear ficheros de entorno reales (el ejemplo sí)
+.env
+!.env.example
+**/.env
+!**/.env.example
+
+# Editor / SO
+.vscode/
+.idea/
+*.log
+.DS_Store
+
+# Residuos de herramientas (transcripciones locales de Copilot/modernize)
+.github/modernize/
