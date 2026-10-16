@@ -3,6 +3,7 @@
 - **Fecha:** 2026-10-01
 - **Nota (2026-10-12):** auditoría histórica, escrita cuando el backend usaba H2. Desde la migración `migrate-h2-to-postgresql` el runtime es 100 % PostgreSQL y la consola H2 ya no existe; las menciones a H2 describen el estado en esa fecha.
 - **Nota (2026-10-12 — cierre):** el cambio [`harden-open-security-findings`](../openspec/changes/harden-open-security-findings/proposal.md) cierra/parcialmente cierra varios hallazgos de esta auditoría: **B-MED-3, B-MED-5, B-MED-6, B-BAJO-6, B-INFO-1** (cerrados) y **B-MED-10, B-BAJO-4, B-BAJO-7, B-INFO-2** (parcialmente cerrados). Detalle en §2 ("Cierre de hallazgos — 2026-10-12").
+- **Nota (2026-10-16 — endurecimiento):** el cambio [`harden-sql-injection-anti-bot`](../../openspec/changes/harden-sql-injection-anti-bot/proposal.md) re-verifica la superficie SQL (**sigue sin vulnerabilidad de inyección**: 19 `@Query` parametrizadas, ahora con tests de regresión y escaping de comodines `LIKE`) y añade lockout progresivo por cuenta con backoff, capas anti-bot en el login (honeypot/reto/Turnstile), auditoría de logins fallidos y `limit_req` de nginx. Detalle en §6 ("Endurecimiento — 2026-10-16").
 - **Alcance:** backend Spring Boot (`backend/`, API REST + JWT) y frontend React/Vite (`frontend/`, SPA)
 - **Metodología:** revisión manual con checklist alineada a OWASP ASVS L1 + `npm audit` + revisión de versiones de dependencias (`versions:display-dependency-updates`). No se ejecutó DAST (ZAP) ni pentest externo: la superficie real es una API REST + SPA desplegada tras un dominio único.
 - **Estado global:** 1 hallazgo crítico corregido en este mismo cambio; ver severidades abajo.
@@ -213,3 +214,97 @@ Metodología: revisión estática de `frontend/src` con checklist OWASP (XSS, al
 2. `cd backend && ./mvnw versions:display-dependency-updates` (y opcionalmente OWASP dependency-check en CI)
 3. Repasar los checklists §2/§3 de este documento contra el código nuevo desde la última auditoría.
 4. Re-test funcional de autorización: sin token → 401, rol WORKER en `/api/admin/**` → 403, ADMIN → 200.
+5. Batería de seguridad del login (§6): `cd backend && ./mvnw test` (los tests de `security/` cubren SQL, lockout, anti-bot y auditoría) y greps de auditoría de §6 sobre el log del servicio.
+
+---
+
+## 6. Endurecimiento — cambio `harden-sql-injection-anti-bot` (2026-10-16)
+
+Cierre documental del cambio OpenSpec [`harden-sql-injection-anti-bot`](../../openspec/changes/harden-sql-injection-anti-bot/proposal.md) (decisiones D1–D9 de su `design.md`). La auditoría §2, punto 5 ("Inyección"), se **re-verificó contra el código actual**: 19 `@Query` (18 JPQL + 1 nativa en `ReservaRepository`, `IN (:antiguosIds)`) todas con enlace `:param`, cero `JdbcTemplate`/`Statement`/concatenación en SQL. **No se encontró ninguna vulnerabilidad de SQL injection**: el alcance SQL fue garantía + regresión, no corrección.
+
+### 6.1 SQL injection: blindaje por tests (§2 punto 5 congelado)
+
+- `security/SqlInjectionRegressionTest` — recorre `backend/src/main` en cada ejecución de la suite y **falla identificando la clase/query** si aparece SQL dinámico no parametrizado (`@Query` concatenado con `+`, `String.format` en query, `createNativeQuery` concatenado, `JdbcTemplate`/`Statement`). Es la convención verificable "SQL dinámico prohibido".
+- `security/SqlPayloadEndpointTest` — payloads `' OR '1'='1`, `'; DROP TABLE trabajadores; --`, `%' OR 1=1 --`, unicode/`%00` contra los endpoints reales (`/api/admin/clientes|trabajadores|servicios?search=`, login, reserva pública): siempre 200/401/4xx controlado, **nunca 500**, payload tratado como texto literal, y tras los payloads las tablas siguen consultables y un usuario de control sigue logueándose.
+- `security/LikeEscapingTest` + helper `security/LikeEscaper` — los comodines `%`/`_` del usuario se tratan literales en las tres búsquedas `LIKE` (búsqueda `100%` no devuelve "Ana 100 euros"; `a_b` no devuelve "Luis aXb") y la búsqueda parcial normal (`marí` → "María López") sigue intacta. Las `@Query` no se reescribieron (solo se añadió `ESCAPE '\'` declarativo).
+
+### 6.2 Lockout progresivo por cuenta (refuerzo de B-MED-5)
+
+Tercer bucket en `RateLimiterService`, clave **SOLO el email normalizado** (`login:acct:{email}`, sin IP): un botnet rotando IPs ya no reinicia el presupuesto de la cuenta. Los buckets `email+IP` e `IP` preexistentes quedan intactos. El 429 se emite **antes** de verificar la contraseña (sin timing-oracle ni BCrypt contra un atacante bloqueado).
+
+| Fallos en la cuenta | Ventana efectiva | `Retry-After` aprox. |
+| --- | --- | --- |
+| 5 (umbral) | 15 min | 900 s |
+| 6.º | 30 min | 1800 s |
+| 7.º | 1 h | 3600 s |
+| … | ×2 por fallo adicional | tope 86400 s (24 h) |
+
+- Cada fallo **durante** el bloqueo re-armala con ventana más larga; un login acertado resetea contador y ventana; sin actividad la ventana expira (ventaneado en memoria ya existente).
+- Semántica HTTP: **429** + `Retry-After` (segundos restantes) + `code=ACCOUNT_LOCKED` (mensaje genérico, también para emails inexistentes → sin oráculo de enumeración); el rate limit genérico sigue con `code=TOO_MANY_REQUESTS`. No se introduce 423.
+- Configurable por env sin redeploy: `APP_SECURITY_LOGIN_LOCKOUT_{THRESHOLD,BASE_SECONDS,MULTIPLIER,MAX_SECONDS}` (defaults 5 / 900 / 2 / 86400). Tests: `AccountLockoutTest`, `LockoutBackoffTest`, `LockoutPropertiesTest` (reloj inyectable, sin `Thread.sleep`).
+
+### 6.3 Capas anti-bot en el login
+
+Orden de evaluación en `AuthService.login`: honeypot → reto → Turnstile → buckets → autenticar. **Defaults: solo la capa barata está ON**; lo "exigente" se activa por env var cuando el propietario lo decida.
+
+| Capa | Property (env) | Default | Comportamiento |
+| --- | --- | --- | --- |
+| Honeypot `website` | `APP_SECURITY_BOT_HONEYPOT_ENABLED` | **ON** | Campo en el DOM off-screen (`aria-hidden`, `tabIndex=-1`, `autocomplete=off`); relleno → 401 `INVALID_CREDENTIALS` genérico con demora ~1 s, sin verificar credenciales ni consumir buckets. Ausente → se tolera (clientes API intactos) |
+| Reto `X-Login-Challenge` | `APP_SECURITY_BOT_CHALLENGE_ENABLED` | OFF | `hex(SHA-256("v1|email|minuto"))`, válido ±1 min. ON: sin cabecera/UA o valor inválido → 403 `code=BOT_CHALLENGE` antes de credenciales. Frontend: `VITE_BOT_CHALLENGE_ENABLED=true` |
+| Turnstile (Cloudflare) | `APP_SECURITY_TURNSTILE_ENABLED` + claves | OFF | Solo con claves: widget en frontend (`VITE_TURNSTILE_SITE_KEY`) y `siteverify` server-side si el token viene presente; inválido → 403. `turnstileToken` nunca exigido por `@Valid`. Sin claves: cero widget y cero llamadas a terceros |
+| Fingerprint (`suspect_ua`) | (va en la auditoría) | Informativo | UA ausente/vacía o `Content-Type` incoherente → `suspect_ua=true` en el log, **no rechaza**; excepción: con reto ON, UA ausente cuenta como fallo de reto |
+| `limit_req` nginx | `deploy/nginx-barbershop.conf` | ON | `rate=5r/m` + `burst=5 nodelay` solo en `location = /api/auth/login` → **503 de nginx** para ráfagas masivas por IP, antes de llegar a la app; el resto de `/api/` sin `limit_req` |
+
+### 6.4 Auditoría de intentos fallidos de login (cómo grepear)
+
+`AuthService` emite **exactamente una línea WARN por intento que no termina en tokens** (más `event=login_ok` a INFO en los aciertos), formato `key=value` de una sola línea:
+
+```
+event=login_failed email=ana@x.com ip=203.0.113.9 reason=ACCOUNT_LOCKED suspect_ua=false path=/api/auth/login ua="Mozilla/5.0 …"
+```
+
+`reason` ∈ `BAD_CREDENTIALS` · `ACCOUNT_LOCKED` · `RATE_LIMITED` · `HONEYPOT` · `CHALLENGE_FAILED`. Ejemplos sobre el servicio en la VM (`deploy/README.md`: unit `barbershop-backend`):
+
+```bash
+# Un ataque de fuerza bruta en curso (todos los motivos de rechazo)
+journalctl -u barbershop-backend --no-pager | grep 'event=login_failed'
+
+# Lockouts por cuenta (backoff activo)
+journalctl -u barbershop-backend --no-pager | grep 'reason=ACCOUNT_LOCKED'
+
+# Rechazos anti-bot (honeypot o reto) y rate limit por IP/email+IP
+journalctl -u barbershop-backend --no-pager | grep -E 'reason=(HONEYPOT|CHALLENGE_FAILED|RATE_LIMITED)'
+
+# Ataque distribuido sobre UNA cuenta: una línea por intento, con su IP
+journalctl -u barbershop-backend --no-pager | grep 'email=victima@ejemplo.com'
+
+# Señales de fingerprint (scripts sin User-Agent)
+journalctl -u barbershop-backend --no-pager | grep 'suspect_ua=true'
+
+# Contrapartida de los aciertos (¿quién ha entrado?)
+journalctl -u barbershop-backend --no-pager | grep 'event=login_ok'
+```
+
+En local, los mismos greps funcionan sobre la salida de `./mvnw spring-boot:run` o sobre el fichero de log rotado. La auditoría se desactiva con `APP_SECURITY_LOGIN_AUDIT_ENABLED=false` (rollback por env var sin redeploy); no cambia ningún status ni cuerpo de la API y no añade latencia perceptible.
+
+### 6.5 Procedimiento nginx (siempre `nginx -t` antes de `reload`)
+
+La conf nueva (`limit_req_zone` fuera del bloque `server` + `location = /api/auth/login` con sus `proxy_set_header` repetidos) se aplica con el procedimiento habitual de `deploy/nginx-barbershop.conf`:
+
+```bash
+sudo cp deploy/nginx-barbershop.conf /etc/nginx/sites-available/barbershop
+sudo nginx -t                          # valida la sintaxis; NO recargar si falla
+sudo systemctl reload nginx            # solo si el test anterior está OK
+```
+
+`NginxConfTest` verifica sobre el texto del fichero que `limit_req_zone`, la `location = /api/auth/login` con todos sus `proxy_set_header` y `limit_req zone=login burst=5 nodelay` siguen presentes (guarda contra regresiones de copy-paste). Rollback: revertir el fichero en git y repetir `nginx -t && systemctl reload`.
+
+### 6.6 Rollback general por env var (sin redeploy de código)
+
+Todos los mecanismos nuevos se apagan por env var en `/etc/barbershop/barbershop.env` + `systemctl restart barbershop-backend`: `APP_SECURITY_BOT_HONEYPOT_ENABLED=false`, `APP_SECURITY_BOT_CHALLENGE_ENABLED=false` (ya false), `APP_SECURITY_TURNSTILE_ENABLED=false` (ya false), `APP_SECURITY_LOGIN_AUDIT_ENABLED=false`, y los `APP_SECURITY_LOGIN_LOCKOUT_*` para relajar umbrales. Los `VITE_*` del frontend sí exigen reconstruir (`npm run build`). **Ningún paso toca el esquema de BD** (el cambio no añade tablas ni columnas) ⇒ no hay migración irreversible que revertir.
+
+### 6.7 Open Questions (del design del cambio)
+
+- **¿Activar `APP_SECURITY_BOT_CHALLENGE_ENABLED=true` en prod?** Solo una vez confirmado que el único consumidor del login es la SPA (el reto rompería scripts/curl de terceros que no calculen la cabecera).
+- **¿Subir el `rate` de nginx (5r/m) si un usuario legítimo ve 503?** Ajuste operativo: observar tráfico real antes de tocar `deploy/nginx-barbershop.conf`; subir a 10r/m o ampliar `burst` es el remedio si aparecen 503 legítimos.
+- Persistir historial de fallos en BD (hoy: log rotado) y store compartido de buckets si algún día hay múltiples instancias — fuera de alcance.
