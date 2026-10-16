@@ -172,6 +172,20 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("No tiene permisos para acceder a este recurso", "ACCESS_DENIED"));
     }
 
+    /**
+     * Reto anti-bot del login no superado (cambio harden-sql-injection-anti-bot,
+     * D5/tarea 3.4): 403 con {@code code=BOT_CHALLENGE}, ANTES de verificar
+     * credenciales y sin tokens. Cubre la cabecera {@code X-Login-Challenge}
+     * ausente/inválida/caducada, el User-Agent ausente con el reto habilitado
+     * y el token de Turnstile inválido (tarea 3.7).
+     */
+    @ExceptionHandler(BotChallengeException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBotChallenge(BotChallengeException ex) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ex.getMessage(), BotChallengeException.CODIGO_BOT_CHALLENGE));
+    }
+
     @ExceptionHandler(SecurityException.class)
     public ResponseEntity<ApiResponse<Void>> handleSecurityException(SecurityException ex) {
         // p. ej. intento de modificar una reserva ajena (ReservaService) → 403, no 500
