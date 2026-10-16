@@ -6,6 +6,7 @@ import com.barbershop.backend.mapper.ServicioMapper;
 import com.barbershop.backend.model.Servicio;
 import com.barbershop.backend.repository.ReservaRepository;
 import com.barbershop.backend.repository.ServicioRepository;
+import com.barbershop.backend.security.LikeEscaper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,7 +51,8 @@ public class ServicioService {
 
     @Transactional(readOnly = true)
     public List<ServicioDTO> searchActivosByNombre(String nombre) {
-        return servicioRepository.findActivosByNombreContainingIgnoreCase(nombre).stream()
+        // Escaping de comodines %/_ (harden-sql-injection-anti-bot, D2).
+        return servicioRepository.findActivosByNombreContainingIgnoreCase(LikeEscaper.contener(nombre)).stream()
                 .map(servicioMapper::toDTO)
                 .toList();
     }

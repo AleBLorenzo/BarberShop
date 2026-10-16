@@ -17,6 +17,7 @@ public interface ServicioRepository extends JpaRepository<Servicio, Long> {
 
     List<Servicio> findByActivoTrue();
 
-    @Query("SELECT s FROM Servicio s WHERE s.activo = true AND LOWER(s.nombre) LIKE LOWER(CONCAT('%', :nombre, '%'))")
+    // ESCAPE declarativo (D2): ver ClienteRepository — H2/PostgreSQL no escapan '\' por defecto.
+    @Query("SELECT s FROM Servicio s WHERE s.activo = true AND LOWER(s.nombre) LIKE LOWER(CONCAT('%', :nombre, '%')) ESCAPE '\\'")
     List<Servicio> findActivosByNombreContainingIgnoreCase(@Param("nombre") String nombre);
 }

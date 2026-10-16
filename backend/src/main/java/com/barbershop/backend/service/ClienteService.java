@@ -5,6 +5,7 @@ import com.barbershop.backend.exception.ResourceNotFoundException;
 import com.barbershop.backend.mapper.ClienteMapper;
 import com.barbershop.backend.model.Cliente;
 import com.barbershop.backend.repository.ClienteRepository;
+import com.barbershop.backend.security.LikeEscaper;
 import com.barbershop.backend.util.ClientNormalizer;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -51,7 +52,10 @@ public class ClienteService {
 
     @Transactional(readOnly = true)
     public List<ClienteDTO> searchByNombre(String nombre) {
-        return clienteRepository.findByNombreContainingIgnoreCase(nombre).stream()
+        // Escaping de comodines %/_ (harden-sql-injection-anti-bot, D2): el
+        // patrón del usuario se interpreta literalmente; el @Query sigue
+        // parametrizado y sin tocar.
+        return clienteRepository.findByNombreContainingIgnoreCase(LikeEscaper.contener(nombre)).stream()
                 .map(clienteMapper::toDTO)
                 .toList();
     }

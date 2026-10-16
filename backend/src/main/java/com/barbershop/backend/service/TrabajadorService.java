@@ -10,6 +10,7 @@ import com.barbershop.backend.model.Trabajador;
 import com.barbershop.backend.repository.ReservaRepository;
 import com.barbershop.backend.repository.SesionAuthRepository;
 import com.barbershop.backend.repository.TrabajadorRepository;
+import com.barbershop.backend.security.LikeEscaper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -57,7 +58,8 @@ public class TrabajadorService {
 
     @Transactional(readOnly = true)
     public List<TrabajadorDTO> searchActivosByNombre(String nombre) {
-        return trabajadorRepository.findActivosByNombreContainingIgnoreCase(nombre).stream()
+        // Escaping de comodines %/_ (harden-sql-injection-anti-bot, D2).
+        return trabajadorRepository.findActivosByNombreContainingIgnoreCase(LikeEscaper.contener(nombre)).stream()
                 .map(trabajadorMapper::toDTO)
                 .toList();
     }

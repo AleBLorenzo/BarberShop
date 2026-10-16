@@ -17,7 +17,8 @@ public interface TrabajadorRepository extends JpaRepository<Trabajador, Long> {
 
     List<Trabajador> findByActivoTrue();
 
-    @Query("SELECT t FROM Trabajador t WHERE t.activo = true AND LOWER(t.nombre) LIKE LOWER(CONCAT('%', :nombre, '%'))")
+    // ESCAPE declarativo (D2): ver ClienteRepository — H2/PostgreSQL no escapan '\' por defecto.
+    @Query("SELECT t FROM Trabajador t WHERE t.activo = true AND LOWER(t.nombre) LIKE LOWER(CONCAT('%', :nombre, '%')) ESCAPE '\\'")
     List<Trabajador> findActivosByNombreContainingIgnoreCase(@Param("nombre") String nombre);
 
     @Query("SELECT t FROM Trabajador t WHERE t.activo = true AND t.id NOT IN (SELECT r.trabajador.id FROM Reserva r WHERE r.fecha = :fecha AND r.estado IN ('PENDIENTE', 'CONFIRMADA'))")

@@ -26,7 +26,10 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
 
     boolean existsByTelefono(String telefono);
 
-    @Query("SELECT c FROM Cliente c WHERE LOWER(c.nombre) LIKE LOWER(CONCAT('%', :nombre, '%'))")
+    // ESCAPE declarativo (D2): H2 (y PostgreSQL) NO usan '\' como carácter de
+    // escape por defecto en LIKE; el patrón lo escapa LikeEscaper en la capa
+    // de servicio y esta cláusula hace que se interprete literalmente.
+    @Query("SELECT c FROM Cliente c WHERE LOWER(c.nombre) LIKE LOWER(CONCAT('%', :nombre, '%')) ESCAPE '\\'")
     List<Cliente> findByNombreContainingIgnoreCase(@Param("nombre") String nombre);
 
     // ========== Backfill de dedupe (ClientDedupeBackfill) ==========
