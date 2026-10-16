@@ -76,6 +76,35 @@ class ClientConsolidationTest {
         assertThat(existeClienteConTelefono(telefono)).isTrue();
     }
 
+    // Spec client-deduplication — "Coincidencia cruzada prioriza el teléfono"
+    // (design D2.5): teléfono → ficha A, email → ficha B ⇒ gana el TELÉFONO:
+    // se completa el hueco de A, B queda intacta y no se crea fila nueva.
+    @Test
+    void conflictoCruzadoGanaElTelefonoYNoTocaLaOtraFicha() {
+        String telefonoA = telefonoUnico();
+        String telefonoB = telefonoUnico();
+        String emailB = "carlos-" + UUID.randomUUID() + "@ejemplo.com";
+        Cliente fichaA = guardar("Cliente A", telefonoA, null);        // sin email
+        Cliente fichaB = guardar("Cliente B", telefonoB, emailB);
+        long antes = clienteRepository.count();
+
+        // Teléfono de A + email de B en la misma petición
+        Cliente resultado = clienteService.findOrCreateByTelefono(
+                "Nombre Nuevo", telefonoA, emailB);
+
+        assertThat(resultado.getId()).isEqualTo(fichaA.getId());   // gana el teléfono
+        assertThat(clienteRepository.count()).isEqualTo(antes);    // sin fila nueva
+
+        Cliente aRecargada = clienteRepository.findById(fichaA.getId()).orElseThrow();
+        assertThat(aRecargada.getEmail()).isEqualTo(emailB);       // hueco completado
+        assertThat(aRecargada.getNombre()).isEqualTo("Cliente A"); // nunca sobrescribir
+
+        Cliente bRecargada = clienteRepository.findById(fichaB.getId()).orElseThrow();
+        assertThat(bRecargada.getNombre()).isEqualTo("Cliente B"); // intacta
+        assertThat(bRecargada.getTelefono()).isEqualTo(telefonoB);
+        assertThat(bRecargada.getEmail()).isEqualTo(emailB);
+    }
+
     // --- helpers ---
 
     private Cliente guardar(String nombre, String telefono, String email) {
@@ -90,8 +119,20 @@ class ClientConsolidationTest {
         return clienteRepository.findByTelefono(telefono).isPresent();
     }
 
+    /**
+     * Teléfono único, SOLO dígitos: la spec client-data-consistency exige que
+     * {@code clientes.telefono} se persista canónico (dígitos, sin prefijo 34),
+     * así que el valor de prueba debe ser ya canónico para que una búsqueda
+     * exacta {@code findByTelefono} lo encuentre (el hook @PrePersist normaliza
+     * antes de guardar). Empieza por 6 → la normalización no lo recorta.
+     */
     private static String telefonoUnico() {
-        // formato válido pero no colisiona con los datos demo (DataSeeder)
-        return "6" + UUID.randomUUID().toString().replace("-", "").substring(0, 9);
+        // no colisiona con los datos demo (DataSeeder) ni entre pruebas
+        java.util.Random random = new java.util.Random();
+        StringBuilder sb = new StringBuilder("6");
+        for (int i = 0; i < 8; i++) {
+            sb.append(random.nextInt(10));
+        }
+        return sb.toString();
     }
 }

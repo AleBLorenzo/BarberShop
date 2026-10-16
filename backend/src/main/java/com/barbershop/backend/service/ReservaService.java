@@ -24,6 +24,7 @@ import com.barbershop.backend.repository.ReservaRepository;
 import com.barbershop.backend.repository.ServicioRepository;
 import com.barbershop.backend.repository.TrabajadorRepository;
 import com.barbershop.backend.security.RateLimiterService;
+import com.barbershop.backend.util.ClientNormalizer;
 import com.barbershop.backend.util.SlotGenerator;
 import com.barbershop.backend.util.TimeSlot;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,7 @@ import java.time.format.TextStyle;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -125,9 +127,13 @@ public class ReservaService {
         // Check availability WITH locking to prevent double-booking
         checkAndLockAvailability(trabajador, request.getFecha(), request.getHoraInicio(), horaFin);
 
-        // Find or create client (teléfono → email → crear; sin duplicar por email)
+        // Find or create client (teléfono → email → crear; sin duplicar por email).
+        // D3: se pasan los valores YA normalizados (la validación de formato de
+        // `validarDatosCliente` ya se ejecutó antes, sobre el texto escrito).
         Cliente cliente = clienteService.findOrCreateByTelefono(
-                request.getClienteNombre(), request.getClienteTelefono(), request.getClienteEmail());
+                request.getClienteNombre(),
+                ClientNormalizer.normalizarTelefono(request.getClienteTelefono()),
+                ClientNormalizer.normalizarEmail(request.getClienteEmail()));
 
         // Create reservation
         Reserva reserva = Reserva.builder()
@@ -385,16 +391,23 @@ public class ReservaService {
         Reserva reserva = reservaRepository.findByTokenCancelacion(token)
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontraron reservas con esos datos"));
 
-        String telefonoReserva = normalizarTelefono(reserva.getCliente().getTelefono());
-        String telefonoConsulta = normalizarTelefono(telefono);
-        if (!telefonoReserva.equals(telefonoConsulta)) {
+        // Identidad canónica (D1): se compara contra telefono_normalizado — con
+        // un cliente guardado como "+34612345678" basta consultar "612345678".
+        // Si la columna aún no está rellena (fila previa al backfill) se
+        // normaliza el teléfono original con la misma regla.
+        Cliente cliente = reserva.getCliente();
+        String telefonoReserva = estaVacio(cliente.getTelefonoNormalizado())
+                ? ClientNormalizer.normalizarTelefono(cliente.getTelefono())
+                : cliente.getTelefonoNormalizado();
+        String telefonoConsulta = ClientNormalizer.normalizarTelefono(telefono);
+        if (!Objects.equals(telefonoReserva, telefonoConsulta)) {
             throw new ResourceNotFoundException("No se encontraron reservas con esos datos");
         }
         return List.of(reservaMapper.toDTO(reserva));
     }
 
-    private String normalizarTelefono(String tel) {
-        return tel == null ? "" : tel.replaceAll("[^0-9]", "");
+    private static boolean estaVacio(String valor) {
+        return valor == null || valor.isBlank();
     }
 
     @Transactional(readOnly = true)

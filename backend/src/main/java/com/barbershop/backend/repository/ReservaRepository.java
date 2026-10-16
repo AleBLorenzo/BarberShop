@@ -6,6 +6,7 @@ import com.barbershop.backend.model.ReservaEstado;
 import com.barbershop.backend.model.Trabajador;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -26,6 +27,18 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     // Find reservations for a client
     List<Reserva> findByClienteOrderByFechaDescHoraInicioDesc(Cliente cliente);
     List<Reserva> findByClienteAndEstadoIn(Cliente cliente, List<ReservaEstado> estados);
+
+    /** Nº de reservas de una ficha (criterio de conservación del merge de duplicados). */
+    long countByCliente_Id(Long id);
+
+    /**
+     * Re-apunta reservas de fichas fusionadas a la ficha conservada
+     * (ClientDedupeBackfill). Nativo: UPDATE directo sobre la FK cliente_id.
+     */
+    @Modifying
+    @Query(value = "UPDATE reservas SET cliente_id = :nuevoClienteId WHERE cliente_id IN (:antiguosIds)", nativeQuery = true)
+    void repuntarReservasACliente(@Param("nuevoClienteId") Long nuevoClienteId,
+                                  @Param("antiguosIds") List<Long> antiguosIds);
 
     // Find reservations for a worker on a date
     List<Reserva> findByTrabajadorAndFechaOrderByHoraInicioAsc(Trabajador trabajador, LocalDate fecha);
