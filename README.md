@@ -161,10 +161,49 @@ Base: `http://localhost:8080/api` — respuestas con envoltorio `{ success, mess
 | `app.business.maps-url` | enlace de Google Maps | Mismo enlace que el botón de la web |
 | `app.booking.max-advance-days` | 60 | Antelación máxima |
 | `app.cors.allowed-origins` | `localhost:5173` etc. | Orígenes permitidos |
+| `app.security.login.lockout.*` | `5` / `900` / `2` / `86400` (`APP_SECURITY_LOGIN_LOCKOUT_*`) | Lockout progresivo por cuenta con backoff exponencial (§ abajo) |
+| `app.security.bot.honeypot.enabled` | `true` (`APP_SECURITY_BOT_HONEYPOT_ENABLED`) | Honeypot `website` en el login (tolerado si falta) |
+| `app.security.bot.challenge.enabled` | `false` (`APP_SECURITY_BOT_CHALLENGE_ENABLED`) | Reto `X-Login-Challenge` (solo la SPA lo envía) |
+| `app.security.turnstile.enabled` | `false` (`APP_SECURITY_TURNSTILE_*`) | CAPTCHA Turnstile opcional (sin claves = sin widget) |
+| `app.security.login.audit.enabled` | `true` (`APP_SECURITY_LOGIN_AUDIT_ENABLED`) | Auditoría `event=login_failed` de cada fallo de login |
+| `app.client-dedupe.merge-duplicates` | `true` (`CLIENT_DEDUPE_MERGE_DUPLICATES` env.) | Fusiona duplicados históricos de clientes al arrancar |
 | `app.mail.enabled` | `true` (`MAIL_ENABLED` env.) | Habilita el correo de confirmación |
 | `app.mail.from` | `notificaciones@barbershop.local` (`MAIL_FROM` env.) | Remitente |
 
 Si cambias el puerto u origen del frontend, actualiza `app.cors.allowed-origins` — sin eso el navegador bloquea todas las llamadas (los fallos CORS no aparecen con `curl`).
+
+### Deduplicación de clientes en el arranque
+
+La identidad del cliente es su **teléfono normalizado** (solo dígitos, sin `+34`/`34`) y su **email en minúsculas**: reservar varias veces con formatos distintos (`612345678`, `+34612345678`, `612-345-678`, `Foo@x.com`) reutiliza siempre la misma ficha. Como no hay Flyway (`ddl-auto=update`), esa normalización se aplica al arrancar mediante `ClientDedupeBackfill` (`ApplicationRunner`, transaccional e idempotente):
+
+- Completa la columna única `clientes.telefono_normalizado` en las filas existentes (el teléfono original tal como lo escribió el usuario **no se toca**).
+- Si varias fichas históricas comparten el mismo teléfono en distinto formato, las **fusiona**: conserva la que tiene más reservas (empate → la más antigua → id menor), le completa `nombre`/`email` solo si estaban vacíos, **re-apunta sus reservas** (`reservas.cliente_id`) y borra las redundantes. Cada fusión se registra en log con todos los ids y sus conteos (`Fusión de clientes duplicados: …` / `Clientes fusionados: N`).
+- Sin duplicados ni formatos sin normalizar no escribe nada; en arranques sucesivos tampoco (idempotente).
+
+| Propiedad | Efecto |
+| --- | --- |
+| `app.client-dedupe.merge-duplicates=true` (por defecto) | Normaliza **y** fusiona duplicados. |
+| `app.client-dedupe.merge-duplicates=false` | **Kill-switch**: solo normaliza; nunca borra ni re-apunta fichas. |
+
+> ⚠️ **Antes del primer despliegue con la fusión activa**, haz una copia de seguridad — la fusión es la única parte destructiva (mueve reservas y borra fichas):
+>
+> ```bash
+> pg_dump -Fc -d <nombre_base> -f barbershop_antes_dedupe.dump
+> ```
+>
+> Rollback: revertir el código basta — la columna nueva es aditiva e inocua para la versión anterior (las fusiones hechas no se deshacen).
+
+### Seguridad del login: lockout progresivo, anti-bot y auditoría
+
+Endurecimiento añadido por el cambio `harden-sql-injection-anti-bot` (detalle, greps y Open Questions en [docs/security-audit.md](docs/security-audit.md) §6):
+
+- **Lockout progresivo por cuenta** (bucket solo email, sin IP): 5 fallos → bloqueo **429 + `Retry-After`** con `code=ACCOUNT_LOCKED` (15 min), y cada fallo posterior durante el bloqueo lo alarga ×2 (6.º → 30 min, 7.º → 1 h, … tope 24 h). Un login acertado lo resetea. La comprobación ocurre **antes** de verificar la contraseña; los buckets `email+IP` e `IP` preexistentes no cambian. Ajustable por `APP_SECURITY_LOGIN_LOCKOUT_*`.
+- **Capas anti-bot**: honeypot `website` **ON** por defecto (relleno → 401 genérico sin verificar credenciales), reto `X-Login-Challenge` y CAPTCHA Turnstile **OFF** por defecto (se activan por env var `APP_SECURITY_BOT_CHALLENGE_ENABLED` / `APP_SECURITY_TURNSTILE_ENABLED` + `VITE_*` en build), fingerprint `suspect_ua` informativo y `limit_req` de nginx (5 r/min + `burst=5`) solo en `/api/auth/login`.
+- **Auditoría**: una línea WARN por intento fallido — `event=login_failed email=… ip=… reason=…` (`BAD_CREDENTIALS` · `ACCOUNT_LOCKED` · `RATE_LIMITED` · `HONEYPOT` · `CHALLENGE_FAILED`) — más `event=login_ok` en los aciertos. Desactivable con `APP_SECURITY_LOGIN_AUDIT_ENABLED=false`.
+- **SQL injection**: sin vulnerabilidad hallada; congelada por tests de regresión (`SqlInjectionRegressionTest`, `SqlPayloadEndpointTest`) y escaping de comodines `%`/`_` en las búsquedas `LIKE`.
+- **nginx**: al tocar `deploy/nginx-barbershop.conf`, validar siempre con `sudo nginx -t` **antes de** `sudo systemctl reload nginx`.
+
+Todas las claves son opcionales y sus defaults son los de la tabla de arriba: rollback por env var sin redeploy de código.
 
 ### Correo de confirmación de cita
 
