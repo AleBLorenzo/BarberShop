@@ -9,6 +9,31 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api
  */
 export const MEDIA_ORIGIN = API_BASE.replace(/\/api\/?$/, '');
 
+// --- Anti-bot: reto X-Login-Challenge (opcional, OFF por defecto) ---
+// La cabecera solo se envía cuando el propietario activa la feature por env
+// var (VITE_BOT_CHALLENGE_ENABLED=true); con el reto OFF el flujo del login
+// no cambia en nada (compatibilidad con clientes API legítimos). El backend
+// verifica hex(SHA-256("v1|<email>|<minuto>")) aceptando ±1 minuto de desfase
+// de reloj (caducidad). Requiere contexto seguro (https o localhost):
+// crypto.subtle no existe en http:// plano — por eso el OFF por defecto no
+// depende de esto.
+const BOT_CHALLENGE_ENABLED = import.meta.env.VITE_BOT_CHALLENGE_ENABLED === 'true';
+
+/**
+ * Calcula el valor del reto anti-bot de login: hex(SHA-256("v1|<email>|<minuto>")),
+ * donde minuto = epoch_ms / 60000. Usa Web Crypto (sin dependencias).
+ * @param {string} email email que se va a enviar en el login
+ * @returns {Promise<string>} valor para la cabecera X-Login-Challenge
+ */
+export async function calcularRetoLogin(email) {
+  const minuto = Math.floor(Date.now() / 60000);
+  const datos = new TextEncoder().encode(`v1|${email}|${minuto}`);
+  const digest = await crypto.subtle.digest('SHA-256', datos);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 /**
  * Convierte una ruta de medio devuelta por la API en una URL utilizable en `<img>`.
  *
@@ -35,6 +60,8 @@ export function mediaUrl(path) {
  * @property {string} email
  * @property {string} password
  * @property {boolean} [rememberMe]
+ * @property {string} [website] campo honeypot anti-bot (el frontend lo envía vacío)
+ * @property {string} [turnstileToken] token opcional de Turnstile (solo si está activo)
  *
  * @typedef {Object} LoginResponse
  * @property {string} accessToken
@@ -194,7 +221,10 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // skipAuthRefresh: el login fallido (401 INVALID_CREDENTIALS) no debe
+    // disparar el refresh ni reescribir el error — Login.jsx necesita el
+    // status real para diferenciar 429 (Retry-After) de 401 (tarea 2.8)
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.skipAuthRefresh) {
       if (isRefreshing) {
         // Queue the request
         return new Promise((resolve, reject) => {
@@ -272,7 +302,19 @@ export const auth = {
    * @returns {Promise<LoginResponse>}
    */
   async login(credentials) {
-    const res = await api.post('/auth/login', credentials);
+    // Reto anti-bot (3.5): solo cuando la feature está activa por env var.
+    // Si el navegador no tiene crypto.subtle (contexto inseguro) se envía sin
+    // la cabecera a propósito: el backend responderá 403 BOT_CHALLENGE y el
+    // error es visible para el operador (mejor que fallar en silencio aquí).
+    const config = { skipAuthRefresh: true };
+    if (BOT_CHALLENGE_ENABLED && credentials?.email) {
+      try {
+        config.headers = { 'X-Login-Challenge': await calcularRetoLogin(credentials.email) };
+      } catch {
+        // sin Web Crypto: login sin cabecera (ver nota arriba)
+      }
+    }
+    const res = await api.post('/auth/login', credentials, config);
     const data = unwrap(res);
     validate(data, ['accessToken']);
     setTokens(data.accessToken, data.refreshToken);

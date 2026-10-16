@@ -56,10 +56,20 @@ export function AuthProvider({ children }) {
    * @param {string} email
    * @param {string} password
    * @param {boolean} [rememberMe]
+   * @param {{website?: string, turnstileToken?: string|null}} [extra] campos
+   *   anti-bot opcionales: `website` es el honeypot (siempre vacío para un
+   *   usuario real; el backend lo tolera ausente) y `turnstileToken` solo si
+   *   el CAPTCHA opcional está activo
    * @returns {Promise<AuthUser>} throws on failure
    */
-  const login = useCallback(async (email, password, rememberMe = false) => {
-    const response = await auth.login({ email, password, rememberMe });
+  const login = useCallback(async (email, password, rememberMe = false, extra = {}) => {
+    const response = await auth.login({
+      email,
+      password,
+      rememberMe,
+      website: extra.website,
+      turnstileToken: extra.turnstileToken ?? undefined,
+    });
     const t = response.trabajador || {};
     const authUser = {
       id: t.id,
