@@ -11,6 +11,7 @@ import com.barbershop.backend.model.Rol;
 import com.barbershop.backend.model.Trabajador;
 import com.barbershop.backend.repository.TrabajadorRepository;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,8 +29,15 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
  * 429 + {@code Retry-After}, reset al acertar y extracción de IP real
  * (X-Real-IP → XFF → remoteAddr).
  *
+ * <p>Con el lockout por cuenta (spec account-lockout, sin IP en la clave) el
+ * 6.º fallo de una misma cuenta responde ya {@code ACCOUNT_LOCKED} aunque la
+ * IP rote; los buckets preexistentes por IP siguen devolviendo
+ * {@code TOO_MANY_REQUESTS} (20 cuentas distintas desde un mismo origen).</p>
+ *
  * <p>Cada método usa una IP propia (cabecera X-Real-IP o remoteAddr) para que
- * los buckets no se contaminen entre métodos ni con el resto de la suite.</p>
+ * los buckets no se contaminen entre métodos ni con el resto de la suite; las
+ * IPs de este test son FIJAS, así que {@code limpiarContadores()} corre en
+ * {@code @BeforeEach} Y en {@code @AfterEach} (aislamiento tarea 5.8).</p>
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -46,10 +54,16 @@ class LoginRateLimitTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private RateLimiterService rateLimiter;
+
     private String emailValido;
 
     @BeforeEach
     void crearUsuario() {
+        // Aislamiento (tarea 5.8): este test usa IPs FIJAS, así que limpia
+        // cualquier bucket residuo de otras clases ANTES de cada método.
+        rateLimiter.limpiarContadores();
         emailValido = "rl-" + UUID.randomUUID().toString().substring(0, 8) + "@barbershop.test";
         trabajadorRepository.save(Trabajador.builder()
                 .nombre("Rate Limit Test")
@@ -60,6 +74,13 @@ class LoginRateLimitTest {
                 .build());
     }
 
+    @AfterEach
+    void limpiarResiduo() {
+        // Las IPs de este test son FIJAS y quedan saturadas (20 fallos/IP):
+        // se limpian para no contaminar a las clases siguientes (tarea 5.8).
+        rateLimiter.limpiarContadores();
+    }
+
     @Test
     void sextoFalloResponde429ConRetryAfter() throws Exception {
         String ip = "203.0.113.10";
@@ -67,12 +88,14 @@ class LoginRateLimitTest {
             mockMvc.perform(login(emailValido, "contrasena-mala-" + i).with(xRealIp(ip)))
                     .andExpect(status().isUnauthorized());
         }
-        // 6.º intento CON la contraseña correcta → tampoco emite tokens
+        // 6.º intento CON la contraseña correcta → tampoco emite tokens: la
+        // cuenta superó el umbral del lockout por cuenta (bucket SIN IP) →
+        // 429 + Retry-After + ACCOUNT_LOCKED (spec account-lockout, D3/D4)
         mockMvc.perform(login(emailValido, PASSWORD).with(xRealIp(ip)))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(header().exists("Retry-After"))
                 .andExpect(jsonPath("$.data.accessToken").doesNotExist())
-                .andExpect(jsonPath("$.errorCode").value("TOO_MANY_REQUESTS"));
+                .andExpect(jsonPath("$.errorCode").value("ACCOUNT_LOCKED"));
     }
 
     @Test
@@ -123,47 +146,53 @@ class LoginRateLimitTest {
 
     @Test
     void usaCabeceraXRealIPComoClaveDelBucket() throws Exception {
-        String email = "rl-xri-" + UUID.randomUUID().toString().substring(0, 8) + "@barbershop.test";
-        trabajadorRepository.save(Trabajador.builder()
-                .nombre("XRI Test").email(email)
-                .passwordHash(passwordEncoder.encode(PASSWORD))
-                .activo(true).rol(Rol.WORKER).build());
-
+        String sufijo = UUID.randomUUID().toString().substring(0, 8);
         String ipBloqueada = "198.51.100.50";
-        for (int i = 0; i < 5; i++) {
-            mockMvc.perform(login(email, "mala").with(xRealIp(ipBloqueada)))
+        // 20 fallos desde MISMA X-Real-IP con emails distintos: ninguna
+        // cuenta alcanza el umbral de lockout, pero la IP de la CABECERA
+        // llega a su límite preexistente (20/15 min) → 429 genérico
+        for (int i = 0; i < 20; i++) {
+            mockMvc.perform(login("rl-xri-" + sufijo + "-" + i + "@barbershop.test", "mala")
+                            .with(xRealIp(ipBloqueada)))
                     .andExpect(status().isUnauthorized());
         }
-        // Misma cuenta + misma X-Real-IP → 429
-        mockMvc.perform(login(email, PASSWORD).with(xRealIp(ipBloqueada)))
-                .andExpect(status().isTooManyRequests());
+        mockMvc.perform(login("rl-xri-" + sufijo + "-final@barbershop.test", "mala")
+                        .with(xRealIp(ipBloqueada)))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().exists("Retry-After"))
+                .andExpect(jsonPath("$.errorCode").value("TOO_MANY_REQUESTS"));
 
-        // Misma cuenta DESDE OTRA IP (sin la cabecera → remoteAddr) → 200:
-        // el bucket usa la IP de la cabecera, no un valor fijo.
-        mockMvc.perform(login(email, PASSWORD))
-                .andExpect(status().isOk());
+        // Misma situación DESDE OTRA X-Real-IP → bucket distinto → NO 429:
+        // la clave del bucket usa la cabecera, no remoteAddr. (La rotación de
+        // IP ya NO resetea la cuenta: eso lo cubre el lockout por cuenta sin
+        // IP del cambio harden-sql-injection-anti-bot.)
+        mockMvc.perform(login("rl-xri-" + sufijo + "-otra@barbershop.test", "mala")
+                        .with(xRealIp("198.51.101.51")))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
     void usaRemoteAddrCuandoNoHayCabecerasDeProxy() throws Exception {
-        String email = "rl-ra-" + UUID.randomUUID().toString().substring(0, 8) + "@barbershop.test";
-        trabajadorRepository.save(Trabajador.builder()
-                .nombre("RemoteAddr Test").email(email)
-                .passwordHash(passwordEncoder.encode(PASSWORD))
-                .activo(true).rol(Rol.WORKER).build());
-
-        RequestPostProcessor desdeIp = remoteAddr("198.51.100.60");
-        for (int i = 0; i < 5; i++) {
-            mockMvc.perform(login(email, "mala").with(desdeIp))
+        String sufijo = UUID.randomUUID().toString().substring(0, 8);
+        String ipBloqueada = "198.51.100.60";
+        // Sin cabeceras de proxy la clave del bucket por IP es remoteAddr:
+        // 20 fallos con emails distintos desde la MISMA remoteAddr → 429
+        for (int i = 0; i < 20; i++) {
+            mockMvc.perform(login("rl-ra-" + sufijo + "-" + i + "@barbershop.test", "mala")
+                            .with(remoteAddr(ipBloqueada)))
                     .andExpect(status().isUnauthorized());
         }
-        mockMvc.perform(login(email, PASSWORD).with(desdeIp))
+        mockMvc.perform(login("rl-ra-" + sufijo + "-final@barbershop.test", "mala")
+                        .with(remoteAddr(ipBloqueada)))
                 .andExpect(status().isTooManyRequests())
-                .andExpect(header().exists("Retry-After"));
+                .andExpect(header().exists("Retry-After"))
+                .andExpect(jsonPath("$.errorCode").value("TOO_MANY_REQUESTS"));
 
-        // Otra IP remota, sin cabeceras → bucket distinto → 200
-        mockMvc.perform(login(email, PASSWORD).with(remoteAddr("198.51.100.61")))
-                .andExpect(status().isOk());
+        // Otra remoteAddr, sin cabeceras → bucket distinto → NO 429: la clave
+        // es la IP remota real, no un valor fijo de cabecera ausente
+        mockMvc.perform(login("rl-ra-" + sufijo + "-otra@barbershop.test", "mala")
+                        .with(remoteAddr("198.51.100.61")))
+                .andExpect(status().isUnauthorized());
     }
 
     // --- helpers ---

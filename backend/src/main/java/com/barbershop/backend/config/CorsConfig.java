@@ -33,6 +33,10 @@ public class CorsConfig {
         configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Requested-With"));
+        // Sin esto el navegador NO deja leer `Retry-After` al SPA en dev
+        // cross-origin (localhost:5173 → 8080): el 429 del lockout debe
+        // poder mostrar "Inténtalo en N s" (tarea 2.8).
+        configuration.setExposedHeaders(List.of("Retry-After"));
         configuration.setAllowCredentials(false);
         configuration.setMaxAge(3600L);
 

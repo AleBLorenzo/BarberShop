@@ -153,14 +153,16 @@ public class GlobalExceptionHandler {
     /**
      * Rate limit superado (login o reserva pública): 429 con la cabecera
      * {@code Retry-After} para que el cliente sepa cuándo reintentar
-     * (B-MED-5/B-MED-6, cambio harden-open-security-findings).
+     * (B-MED-5/B-MED-6, cambio harden-open-security-findings). El body
+     * distingue el código: {@code ACCOUNT_LOCKED} (lockout de cuenta, D4) o
+     * {@code TOO_MANY_REQUESTS} (rate limit genérico) — mismo status, sin 423.
      */
     @ExceptionHandler(TooManyRequestsException.class)
     public ResponseEntity<ApiResponse<Void>> handleTooManyRequests(TooManyRequestsException ex) {
         return ResponseEntity
                 .status(HttpStatus.TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
-                .body(ApiResponse.error(ex.getMessage(), "TOO_MANY_REQUESTS"));
+                .body(ApiResponse.error(ex.getMessage(), ex.getCodigo()));
     }
 
     @ExceptionHandler(AuthorizationDeniedException.class)
