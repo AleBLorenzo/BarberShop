@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { publicApi, mediaUrl } from '../../services/api';
-import { NOMBRE, EMAIL_CONTACTO, TELEFONO, DESCRIPCION, DIRECCION, GOOGLE_MAPS_URL, HORARIO_TEXTO } from '../../config/business';
+import { NOMBRE, EMAIL_CONTACTO, TELEFONO, DESCRIPCION, DIRECCION, GOOGLE_MAPS_URL, INSTAGRAM_URL, HORARIO_TEXTO } from '../../config/business';
 import PriceWithOffer from '../../components/ui/PriceWithOffer';
 import { SkeletonGrid } from '../../components/ui/Skeleton';
 import { ErrorState } from '../../components/ui/EmptyState';
 import Avatar from '../../components/ui/Avatar';
-import { LuStar, LuMapPin, LuPhone, LuMail, LuClock, LuScissors, LuSparkles, LuBrush, LuArrowRight } from 'react-icons/lu';
+import { LuStar, LuMapPin, LuPhone, LuMail, LuClock, LuScissors, LuSparkles, LuBrush, LuArrowRight, LuInstagram } from 'react-icons/lu';
 
 /** Términos del marquee de servicios bajo el hero (decorativo). */
 const MARQUEE_ITEMS = [
@@ -361,6 +361,20 @@ export default function Landing() {
           <LuMail aria-hidden="true" style={{ marginRight: 6 }} />
           <a href={`mailto:${EMAIL_CONTACTO}`} style={{ color: 'inherit' }}>{EMAIL_CONTACTO}</a>
         </p>
+        {INSTAGRAM_URL && (
+          <p>
+            <LuInstagram aria-hidden="true" style={{ marginRight: 6 }} />
+            <a
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'inherit' }}
+              aria-label="Instagram de TheTankBarber (@the_tank_barber)"
+            >
+              @the_tank_barber
+            </a>
+          </p>
+        )}
         <p>
           <LuClock aria-hidden="true" style={{ marginRight: 6 }} />
           {HORARIO_TEXTO}

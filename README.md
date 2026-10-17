@@ -233,6 +233,7 @@ Además, cuando el trabajador marca una reserva como **COMPLETADA** (transición
 | Teléfono | `653812324` |
 | Dirección | Av. Antonio Dominguez, 20, 38650 Arona, Santa Cruz de Tenerife |
 | Google Maps | `https://maps.app.goo.gl/12BLsdYKtLRCxFRe8` (`app.business.maps-url`) |
+| Instagram | `https://www.instagram.com/the_tank_barber` (`frontend/src/config/business.js`) |
 | Horario | Lunes a sábado 9:00–20:00 · **domingos cerrado** |
 
 > **KEEP IN SYNC:** al cambiar cualquiera de estos valores, actualiza `frontend/src/config/business.js`, `backend/.../application.properties`, los asuntos/cuerpos de `EmailService` y este README.

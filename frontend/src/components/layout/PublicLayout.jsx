@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { Outlet, Link, NavLink } from 'react-router-dom';
 import Logo from '../ui/Logo';
 import RouteFallback from '../RouteFallback';
-import { NOMBRE, EMAIL_CONTACTO, DIRECCION, GOOGLE_MAPS_URL, TELEFONO } from '../../config/business';
+import { NOMBRE, EMAIL_CONTACTO, DIRECCION, GOOGLE_MAPS_URL, INSTAGRAM_URL, TELEFONO } from '../../config/business';
 
 /**
  * Barra de progreso de lectura (3px, fija arriba).
@@ -116,6 +116,16 @@ export default function PublicLayout() {
           <a href={`mailto:${EMAIL_CONTACTO}`}>{EMAIL_CONTACTO}</a>
           <a href={`tel:${TELEFONO}`}>{TELEFONO}</a>
           <a href={GOOGLE_MAPS_URL} target="_blank" rel="noopener noreferrer">Google Maps</a>
+          {INSTAGRAM_URL && (
+            <a
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram de TheTankBarber (@the_tank_barber)"
+            >
+              Instagram
+            </a>
+          )}
         </p>
         <p>
           © {new Date().getFullYear()} {NOMBRE} — Tu barbería de confianza

@@ -28,6 +28,9 @@ export const DIRECCION = 'Av. Antonio Dominguez, 20, 38650 Arona, Santa Cruz de 
 /** Enlace público de Google Maps (usado en web y en los correos). */
 export const GOOGLE_MAPS_URL = 'https://maps.app.goo.gl/12BLsdYKtLRCxFRe8';
 
+/** Perfil público de Instagram del negocio (URL limpia, sin parámetros de seguimiento). */
+export const INSTAGRAM_URL = 'https://www.instagram.com/the_tank_barber';
+
 /** Horario textual (lun–sáb, domingos cerrado). */
 export const HORARIO_TEXTO = 'Lunes a sábado · 9:00 – 20:00 · Domingos cerrado';
 
@@ -38,5 +41,6 @@ export default {
   DESCRIPCION,
   DIRECCION,
   GOOGLE_MAPS_URL,
+  INSTAGRAM_URL,
   HORARIO_TEXTO,
 };
