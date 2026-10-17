@@ -32,6 +32,13 @@ export default function Privacidad() {
         carga <b>no</b> establece cookies ni se usa para analítica o publicidad; el detalle
         está en la <Link to="/legal/cookies">política de cookies</Link>.
       </p>
+      <p>
+        La sección «Visítanos» incluye además un mapa de <b>Google Maps</b> que se carga{' '}
+        <b>solo bajo demanda</b>: no se contacta con Google por el mapa hasta que pulsas
+        «Ver mapa». Tras esa acción, Google puede recibir datos técnicos de tu conexión (tu{' '}
+        <b>dirección IP</b> y cabeceras del navegador) y establecer sus propias cookies. Lo
+        detallamos en la <Link to="/legal/cookies">política de cookies</Link>.
+      </p>
 
       <h2>Finalidad y base jurídica</h2>
       <p>

@@ -4,18 +4,21 @@ export default function Cookies() {
     <article style={{ maxWidth: 760, margin: '0 auto' }}>
       <h1>Política de cookies</h1>
       <p>
-        <b>Esta web no usa cookies</b> —ni propias ni de terceros—. Cuando decimos «no usar
-        cookies» nos referimos a que el servidor <b>nunca emite la cabecera{' '}
+        <b>Esta web no usa cookies propias</b>. Cuando decimos «no usar cookies» nos
+        referimos a que el servidor <b>nunca emite la cabecera{' '}
         <code>Set-Cookie</code></b>: el backend es <i>stateless</i> (no guarda la sesión en
         el servidor) y la autenticación viaja en el encabezado{' '}
-        <code>Authorization: Bearer</code> con un token JWT. Eso es distinto del{' '}
+        <code>Authorization: Bearer</code> con un token JWT. Tampoco usamos cookies
+        analíticas ni publicitarias. Eso es distinto del{' '}
         <b>almacenamiento local del navegador</b>, que la app sí utiliza para funcionar (ver
         la tabla siguiente).
       </p>
       <p>
-        Como no hay cookies no esenciales, ni analítica ni publicidad, <b>no se requiere un
-        consentimiento previo</b> (LSSI-CE, art. 22.2) ni se muestra ningún banner de
-        consentimiento: sencillamente no habría nada que consentir.
+        Como no hay cookies propias no esenciales, ni analítica ni publicidad, y ningún
+        recurso de terceros instala cookies por el simple hecho de visitar la web,{' '}
+        <b>no se requiere un consentimiento previo</b> (LSSI-CE, art. 22.2) ni se muestra
+        ningún banner de consentimiento: no hay nada que consentir antes de que lo pidas
+        (el mapa de Google solo se carga si pulsas «Ver mapa»).
       </p>
 
       <h2>Almacenamiento que utilizamos</h2>
@@ -87,6 +90,26 @@ export default function Cookies() {
       <p>
         Google Fonts se mantiene como CDN (no se autoaloja la tipografía), por lo que la{' '}
         <i>Content-Security-Policy</i> (CSP) del sitio no cambia por este motivo.
+      </p>
+      <p>
+        <b>Google Maps</b> (carga <b>bajo demanda</b>): la sección «Visítanos» incluye un
+        mapa embebido que <b>no se solicita a Google hasta que pulsas «Ver mapa»</b>.
+        Mientras no lo hagas no hay ninguna petición a Google por el mapa —ni teselas, ni el
+        mapa incrustado, ni cookies de Google—: solo se muestra un marcador de posición
+        propio. Al pulsar «Ver mapa» el navegador carga el mapa desde{' '}
+        <code>www.google.com</code>; desde ese momento Google <b>puede establecer sus
+        propias cookies</b> y recibir datos técnicos de tu conexión (tu <b>dirección IP</b>{' '}
+        y cabeceras como <code>User-Agent</code> o <code>Referer</code>). Para permitirlo, la{' '}
+        <i>Content-Security-Policy</i> del sitio autoriza{' '}
+        <code>frame-src https://www.google.com</code>, manteniendo intacto el resto de
+        directivas. Puedes consultar cómo trata Google esos datos en su{' '}
+        <a
+          href="https://policies.google.com/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          política de privacidad
+        </a>.
       </p>
       <p>
         <b>Cloudflare Turnstile</b> (condicional): está <b>desactivado por defecto</b>. Solo
