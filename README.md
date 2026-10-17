@@ -85,7 +85,7 @@ VITE_API_BASE_URL=http://localhost:8080/api
 | Barba con cejas | 17 € | 30 min |
 
 ### Público (sin sesión)
-- **Landing** (`/`): servicios, equipo, **resultados** (galería de fotos de clientes en blanco y negro, gestionada por URL desde el panel), **reseñas** (nota media, top 6 y botón «Escríbenos en Google Maps») y **contacto** real (dirección, teléfono, email, horario).
+- **Landing** (`/`): servicios, equipo, **resultados** (galería de fotos de clientes en blanco y negro, gestionada por URL desde el panel), **reseñas** (nota media, top 6 y botón «Escríbenos en Google Maps») y **contacto** real (dirección, teléfono, email, horario) con un **mapa embebido de Google Maps** en «Visítanos», cargado **solo bajo demanda** («Ver mapa»; antes del clic no hay petición a Google ni cookies). El enlace externo «Abrir en Google Maps» se conserva para las indicaciones.
 - **Reserva en 4 pasos**: servicio → trabajador → fecha y hora → confirmación con nombre, teléfono y **email obligatorio** (validado antes de crear la reserva).
   - Disponibilidad en tiempo real (slots por **duración del servicio**, rejilla alineada hacia atrás desde el cierre: con 9:00–20:00 la última cita es 19:30 con 30 min y 19:15 con 45 min), sin horas pasadas para hoy, con reserva de fila anti doble-reserva.
   - Recibo con todos los datos + **token de cancelación** (copiable, sobrevive recargas) y descarga **`.ics`** para añadir la cita al calendario del móvil con alarma 30 min antes.
@@ -201,7 +201,7 @@ Endurecimiento añadido por el cambio `harden-sql-injection-anti-bot` (detalle, 
 - **Capas anti-bot**: honeypot `website` **ON** por defecto (relleno → 401 genérico sin verificar credenciales), reto `X-Login-Challenge` y CAPTCHA Turnstile **OFF** por defecto (se activan por env var `APP_SECURITY_BOT_CHALLENGE_ENABLED` / `APP_SECURITY_TURNSTILE_ENABLED` + `VITE_*` en build), fingerprint `suspect_ua` informativo y `limit_req` de nginx (5 r/min + `burst=5`) solo en `/api/auth/login`.
 - **Auditoría**: una línea WARN por intento fallido — `event=login_failed email=… ip=… reason=…` (`BAD_CREDENTIALS` · `ACCOUNT_LOCKED` · `RATE_LIMITED` · `HONEYPOT` · `CHALLENGE_FAILED`) — más `event=login_ok` en los aciertos. Desactivable con `APP_SECURITY_LOGIN_AUDIT_ENABLED=false`.
 - **SQL injection**: sin vulnerabilidad hallada; congelada por tests de regresión (`SqlInjectionRegressionTest`, `SqlPayloadEndpointTest`) y escaping de comodines `%`/`_` en las búsquedas `LIKE`.
-- **nginx**: al tocar `deploy/nginx-barbershop.conf`, validar siempre con `sudo nginx -t` **antes de** `sudo systemctl reload nginx`.
+- **nginx**: al tocar `deploy/nginx-barbershop.conf`, validar siempre con `sudo nginx -t` **antes de** `sudo systemctl reload nginx`. La CSP incluye `frame-src https://www.google.com` para el mapa embebido bajo demanda de «Visítanos» (sin esa directiva el `iframe` lo bloquearía `default-src 'self'`).
 
 Todas las claves son opcionales y sus defaults son los de la tabla de arriba: rollback por env var sin redeploy de código.
 
@@ -232,7 +232,7 @@ Además, cuando el trabajador marca una reserva como **COMPLETADA** (transición
 | Email | `richelbarber2024@gmail.com` |
 | Teléfono | `653812324` |
 | Dirección | Av. Antonio Dominguez, 20, 38650 Arona, Santa Cruz de Tenerife |
-| Google Maps | `https://maps.app.goo.gl/12BLsdYKtLRCxFRe8` (`app.business.maps-url`) |
+| Google Maps | `https://maps.app.goo.gl/12BLsdYKtLRCxFRe8` (`app.business.maps-url`) · mapa embebido **bajo demanda** (`GOOGLE_MAPS_EMBED_URL`; lat/lng `28.0571747, -16.7231266` en `business.js`) |
 | Instagram | `https://www.instagram.com/the_tank_barber` (`frontend/src/config/business.js`) |
 | Horario | Lunes a sábado 9:00–20:00 · **domingos cerrado** |
 
@@ -275,7 +275,7 @@ Identidad **monocroma minimalista** en todas las superficies (pública y paneles
 
 - `/legal/privacidad` — tratamiento real de datos (nombre, teléfono obligatorios; email opcional solo para confirmación/invitación), derechos RGPD y contacto.
 - `/legal/terminos` — reservas por disponibilidad real, token como única vía de cancelación/reprogramación, antelación máxima 60 días.
-- `/legal/cookies` — **no hay cookies** (ni propias ni de terceros): solo `localStorage` (`refreshToken`) y `sessionStorage` (`bookingDraft`, `lastReserva`), reflejado exactamente en la tabla de la política. La política declara además los recursos de terceros reales (Google Fonts; Turnstile condicional, OFF por defecto).
+- `/legal/cookies` — **no hay cookies propias** (el servidor nunca emite `Set-Cookie`): solo `localStorage` (`refreshToken`) y `sessionStorage` (`bookingDraft`, `lastReserva`), reflejado exactamente en la tabla de la política. La política declara además los recursos de terceros reales (Google Fonts; **Google Maps cargado solo bajo demanda**, que puede usar cookies de Google tras pulsar «Ver mapa»; Turnstile condicional, OFF por defecto).
 - Sin **banner de cookies**: al no haber cookies no esenciales, no se requiere consentimiento (LSSI-CE art. 22.2). La política se descubre desde el enlace «Política de cookies» del footer (`/legal/cookies`).
 
 ## Scripts del frontend
