@@ -12,6 +12,8 @@ import { EmptyState, ErrorState } from '../../components/ui/EmptyState';
 
 /**
  * Client appointments lookup by phone + token.
+ * Verificado (spec booking-without-email-degradation): la recuperación y la
+ * cancelación usan teléfono + token y no dependen ni muestran el email.
  */
 export default function MyAppointments() {
   const navigate = useNavigate();

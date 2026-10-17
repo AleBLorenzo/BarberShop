@@ -147,10 +147,11 @@ export default function WorkerDashboard() {
     if (!PHONE_PATTERN.test(telefono)) {
       errs.clienteTelefono = 'Formato español inválido (ej. 612 345 678)';
     }
+    // Email OPCIONAL del cliente (mismo criterio que el formulario público,
+    // spec booking-contact-email-optional/D2): solo se valida el formato si
+    // el campo trae contenido. NO reintroducir 'Email requerido'.
     const email = form.clienteEmail.trim();
-    if (!email) {
-      errs.clienteEmail = 'Email requerido';
-    } else if (!EMAIL_PATTERN.test(email)) {
+    if (email && !EMAIL_PATTERN.test(email)) {
       errs.clienteEmail = 'Formato de email inválido';
     }
     setFieldErrors(errs);
@@ -164,7 +165,8 @@ export default function WorkerDashboard() {
         horaInicio: form.slot.horaInicio,
         clienteNombre: form.clienteNombre.trim(),
         clienteTelefono: telefono,
-        clienteEmail: email,
+        // Ausencia explícita: sin email se envía null (no cadena vacía)
+        clienteEmail: email || null,
       });
       toast.success(`Cita creada · Token de cancelación: ${creada.tokenCancelacion}`);
       const fechaCreada = form.fecha;
@@ -512,8 +514,7 @@ export default function WorkerDashboard() {
 
         <Input
           id="nueva-email"
-          label="Email"
-          required
+          label="Email (opcional)"
           type="email"
           placeholder="tu@email.com"
           value={form.clienteEmail}
@@ -521,7 +522,9 @@ export default function WorkerDashboard() {
           error={fieldErrors.clienteEmail}
         />
         <small style={{ color: 'var(--muted)' }}>
-          Te enviaremos la confirmación con la cita para su calendario.
+          {form.clienteEmail.trim()
+            ? 'Se enviará la confirmación de la cita al cliente por correo.'
+            : 'Sin email no se enviará la confirmación al cliente; el token queda en pantalla.'}
         </small>
       </Modal>
     </div>

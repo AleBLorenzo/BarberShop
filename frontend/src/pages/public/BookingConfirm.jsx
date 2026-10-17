@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { publicApi } from '../../services/api';
 import { useBooking } from '../../hooks/useBooking';
 import { formatDate, formatTime } from '../../utils/date';
@@ -10,7 +10,10 @@ import { Input, Label } from '../../components/ui/Input';
 
 // Spanish phone: +34 prefix optional, 9 or 6/7 first digit, 9 digits total
 const PHONE_PATTERN = /^(?:\+34\s?)?[679]\d{2}[\s-]?\d{3}[\s-]?\d{3}$/;
-// Email obligatorio (la confirmación de la cita se envía siempre)
+// Email OPCIONAL del cliente (spec booking-contact-email-optional): se valida
+// SOLO cuando el campo trae contenido. NO reintroducir `required` ni un guard
+// que aborte el envío por email vacío — sin email la reserva se crea igual y
+// no se envía correo (el token de cancelación es la vía de recuperación).
 const EMAIL_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
 /**
@@ -25,6 +28,7 @@ export default function BookingConfirm() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -33,6 +37,11 @@ export default function BookingConfirm() {
       clienteEmail: draft.clienteEmail || '',
     },
   });
+
+  // useWatch en vez de watch(): watch() de react-hook-form impide que el
+  // compilador de React analice el componente y desactiva otras reglas de hooks.
+  // Email tecleado, para el copy condicional honesto (spec booking-contact-email-optional, D6)
+  const clienteEmailValue = useWatch({ control, name: 'clienteEmail' });
 
   if (!draft.servicio || !draft.fecha || !draft.slot) {
     return <Navigate to="/reservar/servicio" replace />;
@@ -49,8 +58,10 @@ export default function BookingConfirm() {
     setServerError(null);
     setSubmitting(true);
     const clienteEmail = values.clienteEmail?.trim() || '';
-    // Nunca crear la reserva con un email ausente o inválido
-    if (!EMAIL_PATTERN.test(clienteEmail)) {
+    // Email OPCIONAL (spec booking-contact-email-optional, D1/D2): sin contenido
+    // NO se bloquea el envío. Con contenido, el formato lo valida react-hook-form
+    // (register.validate) y, como defensa, este guard condicional.
+    if (clienteEmail && !EMAIL_PATTERN.test(clienteEmail)) {
       setServerError('Introduce un email válido para recibir la confirmación.');
       setSubmitting(false);
       return;
@@ -65,10 +76,20 @@ export default function BookingConfirm() {
         horaInicio: draft.slot.horaInicio,
         clienteNombre: values.clienteNombre,
         clienteTelefono: values.clienteTelefono.replace(/\s/g, ''),
-        clienteEmail,
+        // Ausencia explícita: sin email se envía null (no cadena vacía)
+        clienteEmail: clienteEmail || null,
       };
       const reserva = await publicApi.createReserva(payload);
-      const successData = { ...reserva, fecha: draft.fecha, slot: draft.slot, servicio: draft.servicio };
+      const successData = {
+        ...reserva,
+        fecha: draft.fecha,
+        slot: draft.slot,
+        servicio: draft.servicio,
+        // null = el cliente no dejó email (BookingSuccess avisa de que no habrá
+        // correo); string = sí dejó email. undefined (p. ej. al reprogramar) =
+        // desconocido → sin aviso (spec booking-without-email-degradation).
+        clienteEmail: clienteEmail || null,
+      };
       // Navigate FIRST with replace: clearing the draft here would trigger this
       // page's guard (redirect to /reservar/servicio) before the success screen
       // mounts. BookingSuccess clears the draft once the receipt is on screen.
@@ -158,22 +179,24 @@ export default function BookingConfirm() {
         </div>
 
         <div className="form-group">
-          <Label htmlFor="clienteEmail" required>Email</Label>
+          <Label htmlFor="clienteEmail">Email (opcional)</Label>
           <Input
             id="clienteEmail"
             type="email"
             placeholder="tu@email.com"
             error={errors.clienteEmail?.message}
             {...register('clienteEmail', {
-              required: 'Email requerido',
-              pattern: {
-                value: EMAIL_PATTERN,
-                message: 'Formato de email inválido',
-              },
+              // Email opcional: valida formato SOLO si el campo trae contenido
+              validate: (value) =>
+                !value?.trim() ||
+                EMAIL_PATTERN.test(value.trim()) ||
+                'Formato de email inválido',
             })}
           />
           <small style={{ color: 'var(--muted)' }}>
-            Te enviaremos la confirmación con la cita para tu calendario.
+            {clienteEmailValue?.trim()
+              ? 'Te enviaremos la confirmación y el recordatorio por correo.'
+              : 'Sin email no recibirás la confirmación por correo. Guarda el token de cancelación para gestionar tu cita.'}
           </small>
         </div>
 

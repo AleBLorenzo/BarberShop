@@ -69,6 +69,15 @@ export default function BookingSuccess() {
       </div>
     ) : null;
 
+  // Regla de representación segura (spec booking-without-email-degradation):
+  // el recibo NUNCA imprime `null`/`undefined` — el helper `row()` omite los
+  // valores `null`/`''` y `ReservaResponse` no expone el email del cliente. Si
+  // algún día se expone, la ausencia se renderiza como "—" o se omite la fila.
+  //
+  // Aviso honesto sin email: `null` = el cliente no dejó email (no se envió
+  // confirmación); `undefined` = desconocido (p. ej. al reprogramar) → sin aviso.
+  const sinEmail = reserva.clienteEmail === null || reserva.clienteEmail === '';
+
   const copyToken = async () => {
     if (!token) return;
     try {
@@ -119,6 +128,26 @@ export default function BookingSuccess() {
           </div>
         )}
       </div>
+
+      {sinEmail && (
+        <p
+          role="status"
+          style={{
+            maxWidth: 480,
+            margin: '0 auto 16px',
+            padding: '10px 14px',
+            borderRadius: 8,
+            border: '1px solid var(--border, #e5e7eb)',
+            background: 'var(--surface, #f8fafc)',
+            color: 'var(--muted)',
+            fontSize: 'var(--font-size-sm)',
+            textAlign: 'left',
+          }}
+        >
+          Sin email registrado: no se ha enviado confirmación por correo. Guarda
+          o copia el token para gestionar tu cita.
+        </p>
+      )}
 
       <div
         style={{

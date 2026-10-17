@@ -400,10 +400,12 @@ export const publicApi = {
   },
 
   /**
-   * Crea una reserva. El formulario público exige `clienteEmail` (validado
-   * antes de enviar); el servidor responde 400 con `message` si el formato no
-   * es válido.
-   * @param {{servicioId: number, trabajadorId: number, fecha: string, horaInicio: string, clienteNombre: string, clienteTelefono: string, clienteEmail: string}} payload
+   * Crea una reserva. El email del cliente es OPCIONAL: si se omite (o viene
+   * vacío) se envía `clienteEmail: null` y NO se envía confirmación por correo;
+   * si viene con contenido, el servidor responde 400 con `message` cuando el
+   * formato no es válido. El formato también se valida inline en el formulario
+   * (spec booking-contact-email-optional).
+   * @param {{servicioId: number, trabajadorId: number, fecha: string, horaInicio: string, clienteNombre: string, clienteTelefono: string, clienteEmail?: string|null}} payload
    * @returns {Promise<{id: number, tokenCancelacion: string}>}
    */
   async createReserva(payload) {

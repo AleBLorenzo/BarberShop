@@ -11,6 +11,8 @@ import { ErrorState } from '../../components/ui/EmptyState';
 
 /**
  * Reschedule page reusing date/time picking for an existing token.
+ * Verificado (spec booking-without-email-degradation): reprogramar usa el token
+ * y no depende ni muestra el email del cliente.
  */
 export default function Reschedule() {
   const { token } = useParams();
