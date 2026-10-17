@@ -6,8 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Carga no bloqueante: evita 820 ms de CSS bloqueante en el render inicial -->
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <!-- Carga no bloqueante: evita ~820 ms de CSS bloqueante en el render inicial.
+         El paso de media="print" a media="all" NO puede hacerse con un manejador de
+         evento en línea (atributo on*): la CSP de producción, script-src 'self', los
+         bloquea. Lo activa el bundle desde frontend/src/main.jsx (mismo origen). -->
+    <link id="geist-font" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet" media="print" />
     <noscript>
       <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet" />
     </noscript>
