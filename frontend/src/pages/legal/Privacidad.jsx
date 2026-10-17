@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { NOMBRE, EMAIL_CONTACTO, TELEFONO, DIRECCION } from '../../config/business';
 
 /** Política de privacidad ajustada al tratamiento real de datos de la app. */
@@ -22,6 +23,14 @@ export default function Privacidad() {
       <p>
         No tratamos datos de tarjetas de pago, ni usamos perfiles de navegación,
         analítica ni publicidad.
+      </p>
+      <p>
+        Para mostrar la tipografía, el sitio carga la fuente desde <b>Google Fonts</b>{' '}
+        (<code>fonts.googleapis.com</code> / <code>fonts.gstatic.com</code>). Al solicitarse,
+        se transmiten a Google datos técnicos de tu conexión (tu <b>dirección IP</b> y
+        cabeceras del navegador como <code>User-Agent</code> o <code>Referer</code>). Esa
+        carga <b>no</b> establece cookies ni se usa para analítica o publicidad; el detalle
+        está en la <Link to="/legal/cookies">política de cookies</Link>.
       </p>
 
       <h2>Finalidad y base jurídica</h2>

@@ -274,8 +274,8 @@ Identidad **monocroma minimalista** en todas las superficies (pública y paneles
 
 - `/legal/privacidad` — tratamiento real de datos (nombre, teléfono obligatorios; email opcional solo para confirmación/invitación), derechos RGPD y contacto.
 - `/legal/terminos` — reservas por disponibilidad real, token como única vía de cancelación/reprogramación, antelación máxima 60 días.
-- `/legal/cookies` — **no hay cookies** (ni propias ni de terceros): solo `localStorage` (`refreshToken`, `cookiesAccepted`) y `sessionStorage` (`bookingDraft`, `lastReserva`), reflejado exactamente en la tabla de la política.
-- `CookieBanner` en `PublicLayout` y `DashLayout`: una sola vez (`localStorage.cookiesAccepted`).
+- `/legal/cookies` — **no hay cookies** (ni propias ni de terceros): solo `localStorage` (`refreshToken`) y `sessionStorage` (`bookingDraft`, `lastReserva`), reflejado exactamente en la tabla de la política. La política declara además los recursos de terceros reales (Google Fonts; Turnstile condicional, OFF por defecto).
+- Sin **banner de cookies**: al no haber cookies no esenciales, no se requiere consentimiento (LSSI-CE art. 22.2). La política se descubre desde el enlace «Política de cookies» del footer (`/legal/cookies`).
 
 ## Scripts del frontend
 

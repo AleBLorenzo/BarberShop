@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { Outlet, Link, NavLink } from 'react-router-dom';
-import CookieBanner from '../CookieBanner';
 import Logo from '../ui/Logo';
 import RouteFallback from '../RouteFallback';
 import { NOMBRE, EMAIL_CONTACTO, DIRECCION, GOOGLE_MAPS_URL, TELEFONO } from '../../config/business';
@@ -127,8 +126,6 @@ export default function PublicLayout() {
           <Link to="/legal/cookies">Política de cookies</Link>
         </p>
       </footer>
-
-      <CookieBanner />
     </div>
   );
 }

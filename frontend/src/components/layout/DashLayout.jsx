@@ -4,7 +4,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { mediaUrl } from '../../services/api';
 import Avatar from '../ui/Avatar';
 import Logo from '../ui/Logo';
-import CookieBanner from '../CookieBanner';
 import RouteFallback from '../RouteFallback';
 import { LuMenu } from 'react-icons/lu';
 
@@ -118,8 +117,6 @@ export default function DashLayout({ brand, links, roleLabel }) {
           <Link to="/legal/cookies">Cookies</Link>
         </footer>
       </div>
-
-      <CookieBanner />
     </div>
   );
 }
