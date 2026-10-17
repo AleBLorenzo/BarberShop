@@ -177,7 +177,16 @@ public class ReservaService {
         validarEmail(request.getClienteEmail());
     }
 
-    /** El email es opcional; si viene, debe tener formato válido (400 si no). */
+    /**
+     * El email es opcional; si viene, debe tener formato válido (400 si no).
+     * Cadena de degradación sin email (cambio optional-client-email-on-booking,
+     * capacidad booking-without-email-degradation): {@code null}/blank →
+     * {@link ClientNormalizer#normalizarEmail} lo vuelve {@code null} →
+     * {@code ClienteService.findOrCreateByTelefono} crea/reutiliza la ficha sin
+     * email → {@code EmailService} omite la confirmación y la invitación a
+     * reseñar (guardas en las líneas 58-59 y 92-93). Aquí no hay nada que
+     * cambiar: es la verificación de que el backend ya degrada.
+     */
     private void validarEmail(String email) {
         if (email == null || email.isBlank()) {
             return;

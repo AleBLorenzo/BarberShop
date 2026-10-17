@@ -39,7 +39,27 @@ public class ReservaCreateRequest {
     @Size(max = 50, message = "El teléfono no puede exceder 50 caracteres")
     private String clienteTelefono;
 
+    // El email del cliente es OPCIONAL (cambio optional-client-email-on-booking,
+    // capacidad booking-contact-email-optional): sin @NotBlank y con un setter
+    // que normaliza antes de que @Valid evalúe @Email. Ver setClienteEmail.
     @Email(message = "El email no tiene un formato válido")
     @Size(max = 150, message = "El email no puede exceder 150 caracteres")
     private String clienteEmail;
+
+    /**
+     * Setter explícito (sobrescribe el generado por Lombok) que normaliza el
+     * email ANTES de que Bean Validation evalúe {@code @Email}: Jackson lo
+     * invoca durante la deserialización, así que un valor de solo espacios
+     * ({@code "   "}) se convierte en {@code null} (ausente) en lugar de
+     * provocar un 400 por formato. Cierra la asimetría {@code ""} (válido) vs
+     * {@code "   "} (400) como defensa en profundidad, sin cambiar el contrato
+     * (el endpoint ya aceptaba {@code null}/{@code ""}). La validación de
+     * formato cuando el email SÍ trae contenido sigue en dos capas: aquí y en
+     * {@code ReservaService.validarEmail}.
+     */
+    public void setClienteEmail(String clienteEmail) {
+        this.clienteEmail = (clienteEmail == null || clienteEmail.isBlank())
+                ? null
+                : clienteEmail.trim();
+    }
 }
