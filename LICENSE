@@ -1,21 +1,69 @@
-MIT License
+Todos los derechos reservados
 
-Copyright (c) 2026 Jorge Alejandro Brito Lorenzo
+Copyright (c) 2026 Jorge Alejandro Brito Lorenzo. Todos los derechos reservados.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. Titularidad
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+El software TheTankBarber, su código fuente, su documentación y sus materiales
+asociados (en adelante, «el Producto») son propiedad exclusiva de Jorge Alejandro
+Brito Lorenzo (en adelante, «el Titular»). El Producto se publica únicamente a
+título informativo y para su consulta; NO se concede licencia alguna por defecto
+ni ningún derecho de uso, copia, modificación o explotación, ni de forma expresa
+ni implícita.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. Prohibiciones
+
+Sin autorización previa y por escrito del Titular, queda prohibido —total o
+parcialmente, en cualquier forma y con cualquier finalidad—:
+
+  - usar el Producto, ejecutarlo o explotarlo;
+  - copiarlo o reproducirlo;
+  - modificarlo o adaptarlo, incluida la creación de obras derivadas;
+  - publicarlo o distribuirlo;
+  - sublicenciarlo;
+  - venderlo, alquilarlo o cederlo a terceros;
+  - alojarlo o desplegarlo en cualquier infraestructura.
+
+3. Cómo solicitar autorización
+
+Para solicitar una licencia de uso, escribe a richelbarber2024@gmail.com con el
+asunto «Solicitud de licencia». Cualquier uso autorizado solo será válido según
+los términos de un acuerdo por escrito e independiente entre el Titular y el
+solicitante.
+
+4. Exclusión de terceros
+
+Las dependencias, bibliotecas y componentes de terceros utilizados por el
+Producto conservan sus propias licencias (por ejemplo MIT o Apache-2.0, según
+frontend/package-lock.json y backend/pom.xml) y sus avisos de copyright. Este
+aviso NO relicencia, altera ni reclama la titularidad sobre ese código ajeno; sus
+términos se mantienen intactos.
+
+5. Sin garantía y limitación de responsabilidad
+
+El Producto se ofrece «tal cual» (as is) y «según disponibilidad», sin garantía de
+ningún tipo, expresa o implícita, incluidas —entre otras— las de comerciabilidad,
+idoneidad para un fin concreto y no infracción. En ningún caso el Titular será
+responsable de daño alguno (directo, indirecto, incidental o consecuente) derivado
+del uso o de la imposibilidad de uso del Producto.
+
+6. Reserva de derechos
+
+El Titular se reserva todos los derechos no concedidos expresamente. Este aviso no
+otorga ningún derecho sobre marcas, logotipos o nombres comerciales, ni concede
+licencia implícita alguna.
+
+7. Nota
+
+Este texto no constituye asesoramiento legal. Se recomienda la revisión por un
+profesional del derecho antes de cualquier uso o explotación del Producto.
+
+---
+
+Alcance temporal (retroactividad de la licencia MIT)
+
+La versión actual y las futuras se rigen por el aviso propietario anterior. Las
+copias del Producto que ya se hubieran distribuido con anterioridad bajo la
+licencia MIT conservan esa licencia MIT sobre sí mismas, pues la concesión MIT es
+irrevocable para quien ya obtuvo una copia. Este aviso no pretende —ni puede—
+revocar retroactivamente esos permisos.

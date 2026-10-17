@@ -21,3 +21,10 @@ salga con el estilo que busca.
 - Teléfono: 653 812 324
 - [Ubicación (Google Maps)](https://maps.app.goo.gl/12BLsdYKtLRCxFRe8)
 - [Instagram (@the_tank_barber)](https://www.instagram.com/the_tank_barber)
+
+## Licencia
+
+Código y contenidos: todos los derechos reservados (© 2026 Jorge Alejandro Brito Lorenzo).
+El código propio no se distribuye bajo licencia de uso libre; requiere autorización previa
+y por escrito del titular.
+

@@ -13,6 +13,14 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<name>BarberShop Backend</name>
 	<description>BarberShop Booking System API</description>
+	<licenses>
+		<license>
+			<name>Proprietary</name>
+			<url>https://github.com/AleBLorenzo/BarberShop/blob/main/LICENSE</url>
+			<distribution>repo</distribution>
+			<comments>Todos los derechos reservados. Uso sujeto a autorización previa y por escrito (ver LICENSE).</comments>
+		</license>
+	</licenses>
 	<properties>
 		<java.version>21</java.version>
 		<jjwt.version>0.12.7</jjwt.version>

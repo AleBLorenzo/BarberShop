@@ -59,6 +59,16 @@ export default function Terminos() {
         <Link to="/legal/privacidad">política de privacidad</Link>; el uso del
         almacenamiento del navegador, en la <Link to="/legal/cookies">política de cookies</Link>.
       </p>
+
+      <h2>Propiedad intelectual</h2>
+      <p>
+        Los textos, imágenes, el diseño, la marca y el código de este sitio son propiedad
+        de {NOMBRE} (Jorge Alejandro Brito Lorenzo), con <b>todos los derechos
+        reservados</b>. Su reproducción, distribución o reutilización requiere autorización
+        previa y por escrito. La licencia de <b>reutilización del código</b> del proyecto es
+        independiente de estos términos y se describe en el archivo <code>LICENSE</code> del
+        repositorio.
+      </p>
     </article>
   );
 }

@@ -7,7 +7,7 @@ Aplicación completa de gestión y reserva de citas para barbería: **landing p�
 | **Marca** | TheTankBarber (fuente única: `frontend/src/config/business.js` ↔ `app.business.name`) |
 | **Backend** | Spring Boot 3.3 · Java 21 · Spring Security (JWT) · Spring Data JPA · PostgreSQL (dev y prod) |
 | **Frontend** | React 19 · Vite 8 · React Router 7 · Axios · react-hook-form · date-fns · CSS custom properties |
-| **Licencia** | MIT |
+| **Licencia** | Propietaria (todos los derechos reservados) |
 
 ## Estructura del proyecto
 
@@ -21,7 +21,7 @@ BarberShop/
 │       ├── repository/ · model/ · dto/ · security/
 │       └── util/         # SlotGenerator (horarios)
 ├── frontend/         # SPA React + Vite (ver frontend/README.md)
-├── LICENSE           # MIT
+├── LICENSE           # Propietaria (todos los derechos reservados)
 └── README.md
 ```
 
@@ -296,4 +296,16 @@ Documentación detallada del frontend: [`frontend/README.md`](frontend/README.md
 
 ## Licencia
 
-[MIT](LICENSE) © Jorge Alejandro Brito Lorenzo
+© 2026 Jorge Alejandro Brito Lorenzo — **Todos los derechos reservados**. El código propio
+de este proyecto es software **propietario**: no se concede licencia de uso por defecto y
+cualquier uso, copia, modificación, distribución o despliegue requiere **autorización previa
+y por escrito** del titular (solicitudes a `richelbarber2024@gmail.com`, asunto «Solicitud de
+licencia»). Ver el aviso completo en [`LICENSE`](LICENSE). Las dependencias de terceros
+conservan sus propias licencias (MIT/Apache-2.0).
+
+> **Nota:** este texto no es asesoramiento legal; conviene una revisión por un profesional
+> del derecho.
+
+> **Retroactividad del MIT:** la relicencia rige para esta versión y las futuras. Las copias
+> ya distribuidas bajo la licencia MIT conservan esa licencia sobre sí mismas: la concesión
+> MIT es irrevocable para quien ya obtuvo una copia.
