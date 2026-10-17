@@ -5,6 +5,10 @@
  *  - backend/src/main/resources/application.properties  (app.business.*)
  *  - backend/src/main/java/.../service/EmailService.java (asuntos/cuerpos de correo)
  *  - README.md
+ *
+ * Si el negocio se muda, actualizar JUNTAS: GOOGLE_MAPS_URL, GOOGLE_MAPS_LAT,
+ * GOOGLE_MAPS_LNG y GOOGLE_MAPS_EMBED_URL (las coordenadas del embed no se
+ * resuelven solas desde el enlace corto).
  */
 
 /** Marca visible (títulos, headers, correos, .ics). */
@@ -25,8 +29,28 @@ export const DESCRIPCION = [
 /** Dirección de la barbería. */
 export const DIRECCION = 'Av. Antonio Dominguez, 20, 38650 Arona, Santa Cruz de Tenerife';
 
-/** Enlace público de Google Maps (usado en web y en los correos). */
+/**
+ * Enlace público de Google Maps (usado en web y en los correos).
+ * OJO: es sensible a mayúsculas — `...LRCx...` (R mayúscula) es la forma válida;
+ * la variante con `r` minúscula devuelve 404. No «corregir» la constante.
+ */
 export const GOOGLE_MAPS_URL = 'https://maps.app.goo.gl/12BLsdYKtLRCxFRe8';
+
+/**
+ * Coordenadas reales del negocio (THE TANK BARBER), resueltas desde
+ * GOOGLE_MAPS_URL. Se usan para fijar el pin del mapa embebido.
+ */
+export const GOOGLE_MAPS_LAT = 28.0571747;
+
+/** Longitud real del negocio; ver GOOGLE_MAPS_LAT. */
+export const GOOGLE_MAPS_LNG = -16.7231266;
+
+/**
+ * URL de embed de Google Maps SIN API key: `?q=<lat>,<lng>` da un pin
+ * determinista en las coordenadas (z=17) sin pasar por el geocodificador.
+ */
+export const GOOGLE_MAPS_EMBED_URL =
+  'https://www.google.com/maps?q=28.0571747,-16.7231266&z=17&output=embed';
 
 /** Perfil público de Instagram del negocio (URL limpia, sin parámetros de seguimiento). */
 export const INSTAGRAM_URL = 'https://www.instagram.com/the_tank_barber';
@@ -41,6 +65,9 @@ export default {
   DESCRIPCION,
   DIRECCION,
   GOOGLE_MAPS_URL,
+  GOOGLE_MAPS_LAT,
+  GOOGLE_MAPS_LNG,
+  GOOGLE_MAPS_EMBED_URL,
   INSTAGRAM_URL,
   HORARIO_TEXTO,
 };

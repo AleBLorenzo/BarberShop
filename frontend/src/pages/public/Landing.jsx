@@ -6,6 +6,7 @@ import PriceWithOffer from '../../components/ui/PriceWithOffer';
 import { SkeletonGrid } from '../../components/ui/Skeleton';
 import { ErrorState } from '../../components/ui/EmptyState';
 import Avatar from '../../components/ui/Avatar';
+import ContactMap from '../../components/ContactMap';
 import { LuStar, LuMapPin, LuPhone, LuMail, LuClock, LuScissors, LuSparkles, LuBrush, LuArrowRight, LuInstagram } from 'react-icons/lu';
 
 /** Términos del marquee de servicios bajo el hero (decorativo). */
@@ -379,6 +380,9 @@ export default function Landing() {
           <LuClock aria-hidden="true" style={{ marginRight: 6 }} />
           {HORARIO_TEXTO}
         </p>
+        {/* Mapa embebido (fachada clic-para-cargar); el enlace externo de la
+            dirección se conserva arriba como vía para las indicaciones. */}
+        <ContactMap />
         <Link to="/mis-citas" className="btn btn-secondary" style={{ marginTop: 12 }}>
           Consultar mis citas
         </Link>

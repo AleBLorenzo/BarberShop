@@ -368,6 +368,64 @@ img {
   margin: var(--space-xs) 0;
 }
 
+/* Mapa embebido de «Visítanos» (fachada clic-para-cargar).
+   Contenedor responsivo 16/9 con los mismos bordes/radio que .landing-contact;
+   `min-height` garantiza altura útil en móviles muy estrechos. */
+.contact-map {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  margin: var(--space-md) auto 0;
+  aspect-ratio: 16 / 9;
+  min-height: 220px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--surface-alt);
+}
+
+/* El marco del mapa ocupa todo el contenedor (alto fijado por el aspect-ratio). */
+.contact-map__frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Marcador de posición íntegramente local, con el botón centrado encima. */
+.contact-map__placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.contact-map__pattern {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--border);
+  opacity: 0.6;
+}
+
+.contact-map__roads {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.contact-map__blocks {
+  fill: currentColor;
+  opacity: 0.4;
+}
+
+/* El botón va sobre el patrón (el foco visible lo hereda de .btn:focus-visible). */
+.contact-map__placeholder .btn {
+  position: relative;
+}
+
 /* ============================================================
    BUTTONS
    ============================================================ */
