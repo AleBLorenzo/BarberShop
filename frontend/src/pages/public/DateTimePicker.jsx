@@ -63,6 +63,9 @@ export default function DateTimePicker() {
   }
 
   const handleDateChange = (dateStr) => {
+    // Re-pulsar el día ya elegido no cambia `fecha`: el effect no se relanza y
+    // el spinner quedaba colgado («Consultando disponibilidad…» para siempre).
+    if (dateStr === fecha) return;
     setLoading(true);
     setSelectedSlot(null);
     setFecha(dateStr);
