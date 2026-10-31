@@ -85,6 +85,16 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     @Query("SELECT r.metodoPago, SUM(s.precio) FROM Reserva r JOIN r.servicio s WHERE r.fecha BETWEEN :start AND :end AND r.estado = 'COMPLETADA' GROUP BY r.metodoPago")
     List<Object[]> sumIngresosCompletadasPorMetodoPagoBetween(@Param("start") LocalDate start, @Param("end") LocalDate end);
 
+    /**
+     * Igual que {@link #sumIngresosCompletadasPorMetodoPagoBetween} pero solo
+     * con las reservas del trabajador indicado (D10): es la que usa el
+     * dashboard del trabajador, que nunca debe agregar a nivel de barbería.
+     */
+    @Query("SELECT r.metodoPago, SUM(s.precio) FROM Reserva r JOIN r.servicio s WHERE r.trabajador = :trabajador AND r.fecha BETWEEN :start AND :end AND r.estado = 'COMPLETADA' GROUP BY r.metodoPago")
+    List<Object[]> sumIngresosCompletadasPorMetodoPagoTrabajadorBetween(@Param("trabajador") Trabajador trabajador,
+                                                                        @Param("start") LocalDate start,
+                                                                        @Param("end") LocalDate end);
+
     /** ¿Existen reservas que referencian este servicio/trabajador? (borrado seguro) */
     boolean existsByServicio_Id(Long id);
     boolean existsByTrabajador_Id(Long id);

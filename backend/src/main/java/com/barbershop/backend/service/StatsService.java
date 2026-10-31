@@ -104,7 +104,10 @@ public class StatsService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // Desglose visa/efectivo: solo reservas COMPLETADA con método registrado
-        BigDecimal[] porMetodo = ingresosPorMetodoPago(fecha, fecha);
+        // y SOLO del trabajador (D10: antes sumaba toda la barbería, fuga de
+        // ingresos de compañeros y del admin en /api/worker/dashboard).
+        BigDecimal[] porMetodo = sumarPorMetodo(
+                reservaRepository.sumIngresosCompletadasPorMetodoPagoTrabajadorBetween(trabajador, fecha, fecha));
 
         int horasOcupadas = reservasActivas.stream()
                 .mapToInt(r -> r.getHoraFin().getHour() * 60 + r.getHoraFin().getMinute()
@@ -128,14 +131,21 @@ public class StatsService {
     }
 
     /**
-     * Desglose de ingresos COMPLETADA por método de pago en el rango:
-     * [ingresosVisa, ingresosEfectivo]. Las reservas completadas sin método
-     * registrado (metodoPago null) cuentan en el total pero no en ninguna franja.
+     * Desglose GLOBAL (toda la barbería) de ingresos COMPLETADA por método de
+     * pago en el rango: [ingresosVisa, ingresosEfectivo]. Solo para
+     * {@link #getDashboardStats} (ADMIN); nunca para endpoints de trabajador (D10).
+     * Las reservas completadas sin método registrado (metodoPago null) cuentan
+     * en el total pero no en ninguna franja.
      */
     private BigDecimal[] ingresosPorMetodoPago(LocalDate start, LocalDate end) {
+        return sumarPorMetodo(reservaRepository.sumIngresosCompletadasPorMetodoPagoBetween(start, end));
+    }
+
+    /** Filas [metodoPago, suma] → [visa, efectivo] (el grupo null se omite). */
+    private static BigDecimal[] sumarPorMetodo(List<Object[]> filas) {
         BigDecimal visa = BigDecimal.ZERO;
         BigDecimal efectivo = BigDecimal.ZERO;
-        for (Object[] fila : reservaRepository.sumIngresosCompletadasPorMetodoPagoBetween(start, end)) {
+        for (Object[] fila : filas) {
             MetodoPago metodo = (MetodoPago) fila[0];
             BigDecimal suma = fila[1] != null ? (BigDecimal) fila[1] : BigDecimal.ZERO;
             if (metodo == MetodoPago.VISA) {
