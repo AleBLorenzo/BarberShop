@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 import { format } from 'date-fns';
 
 /**
@@ -20,7 +20,10 @@ export const DatePicker = forwardRef(function DatePicker(
     onChange(str ? str : null);
   };
 
-  const inputId = rest.id || rest.name || 'date-picker';
+  // useId: antes el id por defecto era fijo ('date-picker') y dos selectores en
+  // la misma página (Desde/Hasta) compartían id → la etiqueta apuntaba al primero.
+  const autoId = useId();
+  const inputId = rest.id || rest.name || autoId;
 
   return (
     <div className="form-group">
