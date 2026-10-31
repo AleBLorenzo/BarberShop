@@ -64,7 +64,7 @@ VITE_API_BASE_URL=http://localhost:8080/api
 - La cita demo de "Mis citas" imprime su **token de cancelación** como UUID en la consola del backend (cambia en cada arranque).
 - PostgreSQL conserva los datos entre reinicios: el `DataSeeder` solo siembra la primera vez, cuando la base está vacía.
 
-> **Nota sobre roles:** el backend no distingue roles de negocio — todo trabajador autenticado obtiene `ROLE_WORKER` y el acceso a `/api/admin/**` requiere ese rol. En la práctica, **cualquier login de staff accede a ambos paneles** (Administración ↔ Mi panel, enlazados entre sí en el sidebar).
+> **Roles:** cada trabajador tiene rol `ADMIN` o `WORKER` (autoridad `ROLE_<rol>` en el JWT). `/api/admin/**` exige **solo `ADMIN`** (regla de `SecurityConfig` + `@PreAuthorize` en `AdminController`; única excepción: `POST /api/admin/media/trabajadores` para subir la propia foto), y `/api/worker/**` admite `WORKER` y `ADMIN` — el admin también tiene «Mi panel» con su agenda, bloqueos e ingresos propios. Un `WORKER` recibe **403** en la API de administración y no ve el enlace «Administración» en el sidebar.
 
 - Ambos paneles incluyen **«Inicio»** como primer enlace del sidebar para volver a la portada pública.
 
@@ -86,21 +86,27 @@ VITE_API_BASE_URL=http://localhost:8080/api
 
 ### Público (sin sesión)
 - **Landing** (`/`): servicios, equipo, **resultados** (galería de fotos de clientes en blanco y negro, gestionada por URL desde el panel), **reseñas** (nota media, top 6 y botón «Escríbenos en Google Maps») y **contacto** real (dirección, teléfono, email, horario) con un **mapa embebido de Google Maps** en «Visítanos», cargado **solo bajo demanda** («Ver mapa»; antes del clic no hay petición a Google ni cookies). El enlace externo «Abrir en Google Maps» se conserva para las indicaciones.
-- **Reserva en 4 pasos**: servicio → trabajador → fecha y hora → confirmación con nombre, teléfono y **email obligatorio** (validado antes de crear la reserva).
+- **Reserva en 4 pasos**: servicio → trabajador → fecha y hora → confirmación con nombre y teléfono obligatorios y **email opcional** (si se indica, se valida el formato; sin email la reserva se crea igual y los avisos se hacen por teléfono).
   - Disponibilidad en tiempo real (slots por **duración del servicio**, rejilla alineada hacia atrás desde el cierre: con 9:00–20:00 la última cita es 19:30 con 30 min y 19:15 con 45 min), sin horas pasadas para hoy, con reserva de fila anti doble-reserva.
   - Recibo con todos los datos + **token de cancelación** (copiable, sobrevive recargas) y descarga **`.ics`** para añadir la cita al calendario del móvil con alarma 30 min antes.
 - **Mis citas** (`/mis-citas`): consultar/cancelar/reprogramar con teléfono + token (`/reprogramar/:token`).
-- **Horario real**: lunes a sábado 9:00–20:00; **domingos cerrado** (la API devuelve `[]` y rechaza crear/reprogramar con 400).
+- **Horario configurable** (§ «Horarios, cierres y avisos»): la portada pinta el horario real de `GET /api/public/horario` (con `HORARIO_TEXTO` de `business.js` solo como respaldo) y el calendario de reserva/reprogramación marca **«Cerrado»** los días sin jornada (`/api/public/dias-cerrados`). Por defecto, lunes a sábado 9:00–20:00 y domingos cerrado. En días cerrados la disponibilidad es `[]` y crear/reprogramar responde 400.
+- **Solo trabajadores reservables**: la reserva pública lista los trabajadores `activo` **y** `reservable` (el admin puede retirarse de la reserva pública sin desactivarse).
+- «Mis citas» muestra las citas **«Cancelada por la barbería»** con su motivo y enlace para reservar de nuevo.
 - **Páginas legales**: `/legal/privacidad`, `/legal/terminos`, `/legal/cookies` + aviso de cookies (una vez, `localStorage`).
 
 ### Trabajador (`/trabajador`, JWT)
-- Dashboard con sus citas **agrupadas por día de la semana** (lunes→sábado), con **navegación por semanas** (anterior / actual / siguiente y rango de fechas visible); los domingos la barbería está cerrada.
+- Dashboard con sus citas **agrupadas por día de la semana** (lunes→domingo, días y jornada leídos de `/api/worker/agenda`), con **navegación por semanas** (anterior / actual / siguiente y rango de fechas visible); los días sin jornada aparecen como **cerrados con su motivo** y no se ofrecen al crear citas.
+- **Horas libres (bloqueos)**: el trabajador (y el admin, para sí mismo) bloquea franjas propias de una fecha («Bloquear horas»), que dejan de ofrecerse en la reserva pública; se rechazan con 409 si pisan una cita activa u otro bloqueo, y deben caer dentro de su jornada.
 - Cambio de estado de citas (confirmar, completar, **no asistió**, cancelar): al marcar **COMPLETADA** un modal pregunta **«¿Vino el cliente?»** y exige elegir el **método de pago (VISA / efectivo)**; con email se envía, una sola vez, una **invitación a dejar reseña** en Google Maps.
-- Ingresos de la semana con **desglose por método de pago** (VISA vs. efectivo).
+- Ingresos de la semana con **desglose por método de pago** (VISA vs. efectivo) — **solo los suyos**: `/api/worker/**` siempre usa el trabajador del JWT y nunca acepta `trabajadorId` de lectura.
 - Perfil (`/trabajador/perfil`) **editable**: nombre, email y foto (subida al momento).
 
 ### Administración (`/admin`, JWT)
-- Dashboard con estadísticas (`/api/admin/dashboard?inicio&fin`), ingresos totales **desglosados por método de pago**, top servicios.
+- Dashboard con estadísticas (`/api/admin/dashboard?inicio&fin`), ingresos totales **desglosados por método de pago**, top servicios y tabla **«Ingresos por trabajador»** (`/api/admin/ingresos`, admin incluido).
+- **Horarios** (`/admin/horarios`): horario general de 7 días y, por trabajador, override por día o «hereda» (contenido en el general); al guardar se listan las citas que quedan fuera con la acción «Cancelar y avisar».
+- **Cierres y avisos** (`/admin/cierres`, con contador de avisos pendientes en el sidebar): cierres de día general o por trabajador con **vista previa obligatoria** de las citas afectadas, y sección **«Clientes por avisar»** (teléfono `tel:` y botón «Avisado»).
+- **Reservas**: «Cancelar y avisar» con motivo (también al pasar una cita a `CANCELADA` desde la edición); **Trabajadores**: interruptor «Reservable».
 - CRUD de trabajadores (alta/baja, activo), servicios, reservas, **reseñas** y **resultados** (`/admin/resultados`: fotos de la galería por URL, con miniatura y validación `http(s)://`).
 - **Borrado seguro**: si el servicio o el trabajador tiene reservas, el backend lo **desactiva** en vez de fallar y el toast muestra el mensaje concreto (p. ej. «El servicio tiene reservas; se desactivó»).
 - Búsqueda, filtros y paginación en cliente (la API devuelve listas completas).
@@ -118,11 +124,13 @@ Base: `http://localhost:8080/api` — respuestas con envoltorio `{ success, mess
 ### Público — `/api/public`
 | Método | Ruta | Descripción |
 | --- | --- | --- |
-| GET | `/servicios` · `/trabajadores` | Catálogo activo |
+| GET | `/servicios` · `/trabajadores` | Catálogo activo (trabajadores `activo` y `reservable`) |
+| GET | `/horario` | Horario general de la semana (7 días, `abierto`, apertura/cierre) |
+| GET | `/dias-cerrados?desde&hasta&trabajadorId?` | Fechas sin jornada (del trabajador o, sin él, sin ningún reservable trabajando); rango ≤ 62 días |
 | GET | `/resenas` | Reseñas de la portada (más recientes primero) |
 | GET | `/resultados` | Galería «Resultados» de la portada (más recientes primero) |
 | POST | `/disponibilidad` | Slots (`fecha`, `servicioId`, `trabajadorId?`) — `[]` en días cerrados |
-| POST | `/reservas` | Crear reserva (`clienteEmail` obligatorio en el formulario; devuelve `tokenCancelacion`) |
+| POST | `/reservas` | Crear reserva (`clienteEmail` opcional; 400 si el trabajador no es reservable; devuelve `tokenCancelacion`) |
 | GET | `/reservas?telefono&token` | Mis citas |
 | POST | `/reservas/cancelar` · `/reservas/reprogramar` | Gestión con token |
 
@@ -131,12 +139,14 @@ Base: `http://localhost:8080/api` — respuestas con envoltorio `{ success, mess
 | --- | --- | --- |
 | GET | `/perfil` | Datos del trabajador logueado |
 | PUT | `/perfil` | Actualizar nombre, email y foto (`{ nombre, email, foto? }`) |
-| GET | `/reservas` · `/reservas/semana?fechaInicio` | Citas por fecha / semana (lun→sáb; `fechaInicio` = lunes `YYYY-MM-DD`, por defecto la semana en curso) |
-| GET | `/dashboard` | Resumen para el panel (incluye `ingresosVisa` / `ingresosEfectivo`) |
+| GET | `/reservas` · `/reservas/semana?fechaInicio` | Citas por fecha / semana (lun→dom; `fechaInicio` = lunes `YYYY-MM-DD`, por defecto la semana en curso) |
+| GET | `/agenda?desde&hasta` | Jornada efectiva propia por día (horario, bloqueos, cierre y motivo) |
+| GET · POST · DELETE | `/bloqueos` · `/bloqueos/{id}` | Bloqueos de horas propios (`{ fecha, horaInicio, horaFin, motivo? }`; 409 si solapa; borrar uno ajeno → 404) |
+| GET | `/dashboard` | Resumen para el panel (incluye `ingresosVisa` / `ingresosEfectivo`, **solo del trabajador logueado**) |
 | POST | `/reservas` | Crear cita — el trabajador sale del JWT (ignora el id del cuerpo) |
 | PUT | `/reservas/{id}/estado` | Cambiar estado — al pasar a `COMPLETADA` es obligatorio `metodoPago=VISA\|EFECTIVO` |
 
-### Administración — `/api/admin` (JWT)
+### Administración — `/api/admin` (JWT, solo rol `ADMIN`)
 | Recurso | Endpoints |
 | --- | --- |
 | `/clientes` | GET/POST · GET/PUT/DELETE `/{id}` |
@@ -145,8 +155,14 @@ Base: `http://localhost:8080/api` — respuestas con envoltorio `{ success, mess
 | `/resenas` | GET/POST · GET/PUT/DELETE `/{id}` (puntuación 1–5 validada) |
 | `/resultados` | GET/POST · GET/PUT/DELETE `/{id}` (URL `https?://…` ≤ 500 o ruta `/uploads/…`) |
 | `/media/{carpeta}` | GET (listar) · POST `multipart archivo` (subir ≤ 5 MB) · DELETE `/{nombre}` — `carpeta`: `trabajadores`\|`servicios`\|`resultados` |
-| `/reservas` | GET/POST · GET/PUT/DELETE `/{id}` |
-| Estadísticas | GET `/dashboard` · GET `/dashboard/top-servicios` |
+| `/reservas` | GET/POST · GET/PUT/DELETE `/{id}` · POST `/{id}/cancelar` `{ motivo }` (cancelación por negocio + aviso) |
+| `/horario` | GET/PUT — horario general (respuesta del PUT: `{ dias, conflictos }`) |
+| `/trabajadores/{id}/horario` | GET/PUT — override semanal (PUT reemplaza; día ausente = hereda el general) |
+| `/agenda/conflictos` | GET `?desde&hasta` — citas activas fuera de jornada (por defecto hoy → +60 días) |
+| `/cierres` | GET `?desde&hasta` · GET `/preview?fecha&trabajadorId?` · POST `{ fecha, trabajadorId?, motivo }` (cancela y avisa) · DELETE `/{id}` (solo fecha ≥ hoy; no reactiva citas) |
+| `/avisos` | GET `?pendientes=true` · GET `/pendientes/count` · PUT `/{id}/avisado` |
+| `/bloqueos` | GET `?trabajadorId&desde&hasta` · DELETE `/{id}` |
+| Estadísticas | GET `/dashboard` · GET `/dashboard/top-servicios` · GET `/ingresos?inicio&fin` (por trabajador + totales) |
 
 ## Configuración relevante (`backend/src/main/resources/`)
 
@@ -154,8 +170,8 @@ Base: `http://localhost:8080/api` — respuestas con envoltorio `{ success, mess
 | --- | --- | --- |
 | `app.jwt.secret` | secreto por defecto (`JWT_SECRET` env.) | Clave HS256 (≥256 bits) |
 | `app.jwt.expiration` / `refresh-expiration` | 24 h / 7 días | Vigencia de tokens |
-| `app.business.opening-hour` / `closing-hour` | 9 / 20 | Horario de la barbería (lun–sáb) |
-| `app.business.closed-days` | `SUNDAY` | Días cerrados (lista de `DayOfWeek`, coma separada) |
+| `app.business.opening-hour` / `closing-hour` | 9 / 20 | **Solo siembra** del horario general (lun–sáb) cuando `horario_barberia` está vacía; después manda la BD |
+| `app.business.closed-days` | `SUNDAY` | **Solo siembra**: días cerrados del horario inicial (lista de `DayOfWeek`) |
 | `app.business.slot-interval-minutes` | 30 | Rejilla mínima de huecos |
 | `app.business.name` | `TheTankBarber` | Marca visible: correos, `.ics`, títulos |
 | `app.business.maps-url` | enlace de Google Maps | Mismo enlace que el botón de la web |
@@ -171,6 +187,15 @@ Base: `http://localhost:8080/api` — respuestas con envoltorio `{ success, mess
 | `app.mail.from` | `notificaciones@barbershop.local` (`MAIL_FROM` env.) | Remitente |
 
 Si cambias el puerto u origen del frontend, actualiza `app.cors.allowed-origins` — sin eso el navegador bloquea todas las llamadas (los fallos CORS no aparecen con `curl`).
+
+### Horarios, cierres y avisos
+
+- **Fuente única**: `AgendaService` calcula la *jornada efectiva* de un trabajador en una fecha (horario general ∩ override del trabajador, menos cierres y bloqueos) y la usan disponibilidad, validación al crear/reprogramar, agenda del trabajador y conflictos. Un trabajador inactivo o sin jornada ese día no ofrece huecos.
+- **Siembra**: `HorarioDefaultsInitializer` (todos los perfiles, idempotente) rellena `horario_barberia` la primera vez con `app.business.opening-hour/closing-hour/closed-days`; a partir de ahí el horario se edita en `/admin/horarios` y cambiar esas propiedades **no** tiene efecto. Los trabajadores sin filas en `horario_trabajador` heredan el general. Jornada de un único tramo por día (las pausas se modelan como bloqueos).
+- **Cierres** (`cierres_dia`): general (toda la barbería) o de un trabajador. Al crearlo se **cancelan de forma atómica** las citas activas afectadas (`canceladaPor=ADMIN` + motivo) bajo un lock pesimista por trabajador que también serializa las reservas concurrentes; borrar un cierre no reactiva citas.
+- **Avisos al cliente** (`avisos_cancelacion`): toda cancelación por negocio crea un aviso. Con email → `EMAIL` y se envía el correo de cancelación tras el commit (`ENVIADO` / `FALLIDO`); sin email → `TELEFONO/PENDIENTE`. «Clientes por avisar» lista los telefónicos pendientes, los emails fallidos y los `PENDIENTE_ENVIO` de más de 15 min; el admin los marca «Avisado» (queda registrado quién y cuándo).
+- **Modo log del email de cancelación**: sin `MAIL_HOST` (modo log) el correo se registra como `[MODO LOG] ...` y el aviso **cuenta como `ENVIADO`** para no llenar el panel en desarrollo — en un entorno sin SMTP nadie avisa realmente a esos clientes.
+- **`reservable`** (`trabajadores.reservable`, por defecto `true`): si es `false` el trabajador desaparece de la reserva pública pero conserva su panel y el staff puede seguir creándole citas.
 
 ### Deduplicación de clientes en el arranque
 
@@ -207,7 +232,7 @@ Todas las claves son opcionales y sus defaults son los de la tabla de arriba: ro
 
 ### Correo de confirmación de cita
 
-Al crear una reserva con `clienteEmail` (**obligatorio y validado en el formulario**, formato validado en servidor → 400 si falta o es inválido) se envía, **tras el commit y en segundo plano** (`@Async` + `@TransactionalEventListener(AFTER_COMMIT)`), un HTML con todos los datos de la cita y un adjunto **`cita.ics`** (`text/calendar`) para añadirla al calendario del cliente con recordatorio 30 min antes. El cliente se resuelve teléfono → email → crear (nunca se duplica por email).
+Al crear una reserva con `clienteEmail` (**opcional**; si se indica, formato validado en el formulario y en servidor → 400 si es inválido) se envía, **tras el commit y en segundo plano** (`@Async` + `@TransactionalEventListener(AFTER_COMMIT)`), un HTML con todos los datos de la cita y un adjunto **`cita.ics`** (`text/calendar`) para añadirla al calendario del cliente con recordatorio 30 min antes. El cliente se resuelve teléfono → email → crear (nunca se duplica por email).
 
 Configuración SMTP **exclusivamente por variables de entorno** (p. ej. `backend/.env`, **no commiteado**): nunca escribas credenciales reales en el repositorio; sin `MAIL_HOST` la app funciona en modo log.
 
@@ -234,7 +259,7 @@ Además, cuando el trabajador marca una reserva como **COMPLETADA** (transición
 | Dirección | Av. Antonio Dominguez, 20, 38650 Arona, Santa Cruz de Tenerife |
 | Google Maps | `https://maps.app.goo.gl/12BLsdYKtLRCxFRe8` (`app.business.maps-url`) · mapa embebido **bajo demanda** (`GOOGLE_MAPS_EMBED_URL`; lat/lng `28.0571747, -16.7231266` en `business.js`) |
 | Instagram | `https://www.instagram.com/the_tank_barber` (`frontend/src/config/business.js`) |
-| Horario | Lunes a sábado 9:00–20:00 · **domingos cerrado** |
+| Horario | Por defecto lunes a sábado 9:00–20:00 · **domingos cerrado** (siembra; el real se edita en `/admin/horarios` y se publica en `/api/public/horario`; `HORARIO_TEXTO` es solo respaldo) |
 
 > **KEEP IN SYNC:** al cambiar cualquiera de estos valores, actualiza `frontend/src/config/business.js`, `backend/.../application.properties`, los asuntos/cuerpos de `EmailService` y este README.
 
@@ -273,8 +298,8 @@ Identidad **monocroma minimalista** en todas las superficies (pública y paneles
 
 ### Páginas legales y cookies
 
-- `/legal/privacidad` — tratamiento real de datos (nombre, teléfono obligatorios; email opcional solo para confirmación/invitación), derechos RGPD y contacto.
-- `/legal/terminos` — reservas por disponibilidad real, token como única vía de cancelación/reprogramación, antelación máxima 60 días.
+- `/legal/privacidad` — tratamiento real de datos (nombre, teléfono obligatorios; email opcional para confirmación, aviso de cancelación e invitación; teléfono para el aviso de cancelación si no hay email), derechos RGPD y contacto.
+- `/legal/terminos` — reservas por disponibilidad real con horario publicado variable (cierres puntuales), cancelación por el establecimiento con aviso, token como única vía de cancelación/reprogramación, antelación máxima 60 días.
 - `/legal/cookies` — **no hay cookies propias** (el servidor nunca emite `Set-Cookie`): solo `localStorage` (`refreshToken`) y `sessionStorage` (`bookingDraft`, `lastReserva`), reflejado exactamente en la tabla de la política. La política declara además los recursos de terceros reales (Google Fonts; **Google Maps cargado solo bajo demanda**, que puede usar cookies de Google tras pulsar «Ver mapa»; Turnstile condicional, OFF por defecto).
 - Sin **banner de cookies**: al no haber cookies no esenciales, no se requiere consentimiento (LSSI-CE art. 22.2). La política se descubre desde el enlace «Política de cookies» del footer (`/legal/cookies`).
 
