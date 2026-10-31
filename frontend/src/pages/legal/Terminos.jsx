@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { HORARIO_TEXTO, NOMBRE } from '../../config/business';
+import { NOMBRE } from '../../config/business';
 import { useSeo } from '../../components/Seo';
 
 /** Términos de uso del servicio de reservas, coherentes con el comportamiento real. */
@@ -22,9 +22,10 @@ export default function Terminos() {
       <ul>
         <li>Las citas se reservan sujetas a <b>disponibilidad en tiempo real</b>: si un
           hueco aparece ocupado, ya está reservado.</li>
-        <li>Horario de atención: <b>{HORARIO_TEXTO}</b>. No se ofrecen horas pasadas ni
-          citas que terminen después del cierre (la última empieza a la hora de cierre
-          menos la duración del servicio).</li>
+        <li>El horario de atención es el publicado en la web en cada momento y puede
+          variar por días o por profesional (incluidos cierres puntuales). No se ofrecen
+          horas pasadas, días cerrados ni citas que terminen después del cierre (la
+          última empieza a la hora de cierre menos la duración del servicio).</li>
         <li>Solo se aceptan reservas con hasta <b>60 días de antelación</b> como máximo.</li>
         <li>Es obligatorio indicar <b>nombre y teléfono</b>; el email es opcional y se usa
           para enviarte la confirmación.</li>
@@ -43,6 +44,9 @@ export default function Terminos() {
         <li>Puedes cancelar o reprogramar tu cita en cualquier momento antes de la hora
           señalada, usando el token.</li>
         <li>Una reserva cancelada libera el hueco para otra persona.</li>
+        <li>Si por causas del establecimiento (cierre del local o ausencia del
+          profesional) tenemos que cancelar tu cita, te avisaremos por email o, si no lo
+          facilitaste, por teléfono, indicando el motivo; podrás reservar de nuevo.</li>
         <li>Si no acudes sin avisar, el establecimiento podrá marcar la cita como
           <b> no presentado</b>.</li>
       </ul>

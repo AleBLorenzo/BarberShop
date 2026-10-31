@@ -22,10 +22,13 @@ export default function Privacidad() {
       <p>Para gestionar tu cita tratamos únicamente los datos que nos facilitas al reservar:</p>
       <ul>
         <li><b>Nombre</b> (obligatorio).</li>
-        <li><b>Teléfono</b> (obligatorio): identifica la reserva y permite cancelar o reprogramar.</li>
-        <li><b>Email</b> (opcional): solo se usa para enviarte la confirmación de la cita y,
-          si la cita se completa, una invitación a dejarnos una reseña. Si no lo indicas,
-          la reserva se crea igualmente.</li>
+        <li><b>Teléfono</b> (obligatorio): identifica la reserva, permite cancelar o
+          reprogramar y, si no facilitaste email, lo usamos para <b>avisarte por teléfono</b>{' '}
+          si tenemos que cancelar tu cita (por ejemplo, por un cierre del local).</li>
+        <li><b>Email</b> (opcional): solo se usa para enviarte la confirmación de la cita,
+          el <b>aviso de cancelación</b> si la barbería tiene que anularla y, si la cita se
+          completa, una invitación a dejarnos una reseña. Si no lo indicas, la reserva se
+          crea igualmente.</li>
       </ul>
       <p>
         No tratamos datos de tarjetas de pago, ni usamos perfiles de navegación,
@@ -51,7 +54,8 @@ export default function Privacidad() {
       <p>
         Los datos se tratan para <b>prestar el servicio de reserva de citas</b> que nos
         solicitas (ejecución de contrato) y, en su caso, enviarte comunicaciones
-        relacionadas con esa misma cita (interés legítimo). Nunca se ceden a terceros
+        relacionadas con esa misma cita, incluido el aviso de su cancelación por parte de
+        la barbería y el registro interno de que se te ha avisado (interés legítimo). Nunca se ceden a terceros
         ni se usan con fines comerciales.
       </p>
 
