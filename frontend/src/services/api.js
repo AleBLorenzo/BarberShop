@@ -595,8 +595,10 @@ export const adminApi = {
       nombre: trabajador.nombre,
       email: trabajador.email,
       activo: !trabajador.activo,
-      // El update del backend reemplaza `foto` tal cual: sin enviarla se perdería
+      // El update del backend reemplaza `foto` y `descripcion` tal cual: sin
+      // enviarlas se perderían
       foto: trabajador.foto || '',
+      descripcion: trabajador.descripcion ?? null,
     });
     return unwrap(res);
   },
