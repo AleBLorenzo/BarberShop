@@ -117,7 +117,17 @@ Asymmetric radius — top corners 24px on header, bottom corners 24px on footer.
 ### Input Field
 **Role:** Text entry, search, form controls
 
-Background #f5f5f5 (resting) or transparent (inline), text #0a0a0a, border none at rest with 1px #e5e5e5 on focus, radius 18px, padding 8px 10px, font 14px weight 400. The soft gray fill differentiates the input from the card surface beneath it; focus replaces the fill with a 1px ring.
+Background #f5f5f5 (resting) or transparent (inline), text #0a0a0a, **1px solid #878787 border at rest** (`--input-border`), #6b6b6b on hover, 1px #0a0a0a on focus, radius 18px, padding 8px 10px, font 14px weight 400. The soft gray fill differentiates the input from the card surface beneath it; focus replaces the fill with the card surface and darkens the 1px ring.
+
+> **Desviación de la guía original (accesibilidad, WCAG 2.2 — 1.4.11 Contraste no textual).** La guía shadcn definía el input sin borde en reposo y un anillo #e5e5e5 al enfocar. En esta app el relleno #f5f5f5 coincide con el canvas #f5f5f5 (1:1) y sobre la card blanca solo da 1.09:1, así que el campo no se distinguía en reposo; el anillo #e5e5e5 tampoco (1.3:1 sobre blanco). Se añade un borde de 1px (mismo radio, sin sombras) con contraste ≥ 3:1 frente a cualquier superficie adyacente, centralizado en tokens CSS:
+>
+> | Token | Claro | Oscuro | Contraste medido |
+> | --- | --- | --- | --- |
+> | `--input-border` (reposo) | `#878787` | `#6b6b6b` | Claro: 3.30:1 canvas #f5f5f5 · 3.59:1 card #fff · 3.44:1 surface-alt #fafafa. Oscuro: 3.36:1 card #171717 · 3.72:1 canvas #0a0a0a · 3.54:1 surface-alt #111 |
+> | `--input-border-hover` | `var(--muted)` #6b6b6b | `var(--muted)` #a1a1a1 | Un paso más marcado que el reposo |
+> | `--input-border-focus` | `var(--text)` #0a0a0a | `var(--text)` #f5f5f5 | 5.7:1 (claro) / 4.9:1 (oscuro) frente al borde de reposo: el foco se distingue del reposo |
+>
+> El borde existe siempre (no solo al enfocar), así que el control no cambia de tamaño entre estados. `.error` sigue usando ember (`--danger`) y prevalece sobre el hover.
 
 ### Badge — Solid
 **Role:** Tag, status pill, counter
@@ -185,13 +195,14 @@ Text or icon in #e7000b against the monochromatic palette. The red is the only c
 | 0 | Canvas | `#f5f5f5` | Page background, broadest layer |
 | 1 | Sidebar | `#fafafa` | Navigation surface, one step lighter than canvas |
 | 2 | Card | `#ffffff` | Primary content container, brightest surface |
-| 3 | Input Fill | `#f5f5f5` | Resting input field, matches canvas tone for subtle differentiation |
+| 3 | Input Fill | `#f5f5f5` | Resting input field, matches canvas tone; always paired with the 1px `--input-border` (#878787) so it stays distinguishable (WCAG 1.4.11) |
 
 ## Elevation
 
 - **Card:** `0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)`
 - **Button (filled):** `none — relies on tonal contrast, not shadow`
-- **Input (focus):** `1px solid #e5e5e5 ring, no offset shadow`
+- **Input (rest):** `1px solid #878787 border (--input-border), no shadow`
+- **Input (focus):** `1px solid #0a0a0a ring (--input-border-focus), no offset shadow`
 
 ## Imagery
 
@@ -215,7 +226,7 @@ Minimal imagery — the system is almost entirely UI. No hero photography, no il
 
 3. Create a ghost secondary button: background #f5f5f5, text #0a0a0a, no border, 18px radius, padding 0px 12px, font 14px weight 500. Same dimensions as the filled button for visual parity.
 
-4. Create an input field: background #f5f5f5, text #0a0a0a, placeholder #737373, no border at rest, 18px radius, padding 8px 10px, font 14px weight 400. On focus: 1px solid #e5e5e5 ring with no offset.
+4. Create an input field: background #f5f5f5, text #0a0a0a, placeholder #6b6b6b, 1px solid #878787 border at rest (≥ 3:1, WCAG 1.4.11), 18px radius, padding 8px 10px, font 14px weight 400. On focus: 1px solid #0a0a0a ring with no offset.
 
 5. Create a badge tag: background #171717, text #fafafa, 18px radius (full pill), padding 2px 8px, font 12px Geist weight 500.
 
@@ -318,6 +329,7 @@ shadcn/ui is built on three principles visible in every token: (1) achromatic by
   --surface-sidebar: #fafafa;
   --surface-card: #ffffff;
   --surface-input-fill: #f5f5f5;
+  --input-border: #878787; /* WCAG 1.4.11: ≥ 3:1 sobre canvas y card */
 }
 ```
 

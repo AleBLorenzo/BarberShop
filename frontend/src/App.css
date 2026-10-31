@@ -12,6 +12,13 @@
   --muted: #737373;           /* mid-gray: texto secundario y placeholders */
   --border: #e5e5e5;          /* hairline: bordes de card e inputs */
   --border-strong: #d4d4d4;   /* hairline reforzado para controles interactivos */
+  /* Borde de inputs/selects/textarea en reposo (WCAG 1.4.11, contraste no
+     textual ≥ 3:1). El relleno #f5f5f5 sin borde se confundía con el canvas
+     #f5f5f5. #878787 da 3.30:1 sobre el canvas, 3.59:1 sobre la card #fff y
+     3.44:1 sobre surface-alt #fafafa. */
+  --input-border: #878787;
+  --input-border-hover: var(--muted);   /* #6b6b6b: un paso más marcado */
+  --input-border-focus: var(--text);    /* ink #0a0a0a: 5.7:1 frente al reposo */
   --accent: #0a0a0a;          /* ink: acción primaria rellena */
   --accent-bg: rgba(10, 10, 10, 0.06);
   --accent-border: rgba(10, 10, 10, 0.75);
@@ -82,6 +89,8 @@
     --muted: #a1a1a1;
     --border: #2a2a2a;
     --border-strong: #3f3f3f;
+    /* #6b6b6b: 3.36:1 sobre la card #171717, 3.72:1 sobre el canvas #0a0a0a */
+    --input-border: #6b6b6b;
     --accent: #f5f5f5;
     --accent-bg: rgba(255, 255, 255, 0.12);
     --accent-border: rgba(255, 255, 255, 0.7);
@@ -610,7 +619,9 @@ img {
   padding: 8px 10px;          /* 8×10 de DESIGN.md */
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
-  border: 1px solid transparent;  /* sin borde en reposo (no salta al enfocar) */
+  /* Borde 1px visible en reposo (WCAG 1.4.11, ver --input-border); al
+     enfocar solo cambia el color, así que el control no salta de tamaño. */
+  border: 1px solid var(--input-border);
   border-radius: var(--radius-pill);
   background: var(--bg);          /* relleno canvas #f5f5f5 */
   color: var(--text);
@@ -626,8 +637,19 @@ img {
 .form-select:focus,
 .form-textarea:focus {
   outline: none;
-  border-color: var(--border);    /* anillo hairline 1px, sin sombra desplazada */
+  /* DESIGN.md pide anillo hairline (#e5e5e5), pero sobre blanco da 1.3:1 y el
+     foco no se percibe (WCAG 2.4.7 / 1.4.11). Con borde visible en reposo, el
+     foco pasa a ink (--input-border-focus): sigue siendo un anillo 1px
+     monocromo, sin sombra desplazada, y se distingue del reposo (5.7:1). */
+  border-color: var(--input-border-focus);
   background: var(--card-bg);     /* el relleno se reemplaza por el anillo */
+}
+
+/* :where() deja la especificidad en 0,2,0 para que .error (posterior) gane */
+.form-input:hover:where(:not(:disabled):not(:focus)),
+.form-select:hover:where(:not(:disabled):not(:focus)),
+.form-textarea:hover:where(:not(:disabled):not(:focus)) {
+  border-color: var(--input-border-hover);
 }
 
 .form-input.error,
