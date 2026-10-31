@@ -1,6 +1,9 @@
 package com.barbershop.backend.controller.worker;
 
 import com.barbershop.backend.dto.ApiResponse;
+import com.barbershop.backend.dto.BloqueoCreateRequest;
+import com.barbershop.backend.dto.BloqueoDTO;
+import com.barbershop.backend.dto.DiaAgendaDTO;
 import com.barbershop.backend.dto.ReservaCreateRequest;
 import com.barbershop.backend.dto.ReservaDTO;
 import com.barbershop.backend.dto.ReservaResponse;
@@ -10,19 +13,31 @@ import com.barbershop.backend.dto.WorkerPerfilUpdateRequest;
 import com.barbershop.backend.model.ReservaEstado;
 import com.barbershop.backend.model.Trabajador;
 import com.barbershop.backend.repository.TrabajadorRepository;
+import com.barbershop.backend.service.AgendaService;
+import com.barbershop.backend.service.BloqueoService;
 import com.barbershop.backend.service.ReservaService;
 import com.barbershop.backend.service.StatsService;
 import com.barbershop.backend.service.TrabajadorService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 
+/**
+ * Panel del trabajador (también lo usa el ADMIN en "Mi panel"). Regla D10:
+ * NINGÚN endpoint de esta clase acepta un {@code trabajadorId} para leer o
+ * escribir; el trabajador sale siempre del JWT ({@link #getTrabajador}) y
+ * cualquier {@code ?trabajadorId=} o campo del cuerpo se ignora.
+ */
 @RestController
 @RequestMapping("/api/worker")
 @RequiredArgsConstructor
@@ -32,6 +47,8 @@ public class WorkerController {
     private final StatsService statsService;
     private final TrabajadorRepository trabajadorRepository;
     private final TrabajadorService trabajadorService;
+    private final BloqueoService bloqueoService;
+    private final AgendaService agendaService;
 
     @GetMapping("/perfil")
     public ResponseEntity<ApiResponse<TrabajadorDTO>> getPerfil(
@@ -90,12 +107,13 @@ public class WorkerController {
     }
 
     /**
-     * Semana del trabajador: lunes a sábado (domingo cerrado, 6 días).
+     * Semana del trabajador: lunes a domingo (7 días; qué días trabaja de
+     * verdad lo dice {@code GET /api/worker/agenda}).
      * {@code fechaInicio} (yyyy-MM-dd) permite navegar a semanas futuras;
-     * si no viene, se usa el lunes de la semana actual (compatibilidad).
+     * si no viene, se usa el lunes de la semana actual.
      * {@code fechaFin} (yyyy-MM-dd, opcional, inclusive) permite pedir rangos
-     * mayores que una semana, p. ej. el mes completo; por defecto sigue siendo
-     * {@code fechaInicio + 5} (sábado).
+     * mayores que una semana, p. ej. el mes completo; por defecto
+     * {@code fechaInicio + 6} (domingo).
      */
     @GetMapping("/reservas/semana")
     public ResponseEntity<ApiResponse<List<ReservaDTO>>> getReservasSemana(
@@ -103,10 +121,8 @@ public class WorkerController {
             @RequestParam(required = false) LocalDate fechaInicio,
             @RequestParam(required = false) LocalDate fechaFin) {
         Trabajador trabajador = getTrabajador(userDetails);
-        LocalDate inicio = fechaInicio != null
-                ? fechaInicio
-                : LocalDate.now().with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
-        LocalDate fin = fechaFin != null ? fechaFin : inicio.plusDays(5); // lunes → sábado (sin domingo)
+        LocalDate inicio = fechaInicio != null ? fechaInicio : lunesDeEstaSemana();
+        LocalDate fin = fechaFin != null ? fechaFin : inicio.plusDays(6); // lunes → domingo
         List<ReservaDTO> reservas = reservaService.findMisReservasSemana(trabajador.getId(), inicio, fin);
         return ResponseEntity.ok(ApiResponse.ok(reservas));
     }
@@ -135,6 +151,66 @@ public class WorkerController {
         LocalDate targetFecha = fecha != null ? fecha : LocalDate.now();
         WorkerDashboardDTO dashboard = statsService.getWorkerDashboard(trabajador.getId(), targetFecha);
         return ResponseEntity.ok(ApiResponse.ok(dashboard));
+    }
+
+    // ========== AGENDA Y BLOQUEOS (D5, D11) ==========
+
+    /**
+     * Agenda efectiva del trabajador autenticado: por cada fecha de
+     * [desde, hasta] si trabaja, su jornada, el cierre que le afecta (con
+     * motivo) y sus bloqueos. Por defecto la semana actual lunes → domingo;
+     * rango máximo 62 días.
+     */
+    @GetMapping("/agenda")
+    public ResponseEntity<ApiResponse<List<DiaAgendaDTO>>> getAgenda(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+        Trabajador trabajador = getTrabajador(userDetails);
+        LocalDate inicio = desde != null ? desde : lunesDeEstaSemana();
+        LocalDate fin = hasta != null ? hasta : inicio.plusDays(6);
+        return ResponseEntity.ok(ApiResponse.ok(agendaService.agendaTrabajador(trabajador, inicio, fin)));
+    }
+
+    /** Bloqueos propios en [desde, hasta] (por defecto hoy → +60 días). */
+    @GetMapping("/bloqueos")
+    public ResponseEntity<ApiResponse<List<BloqueoDTO>>> getBloqueos(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+        Trabajador trabajador = getTrabajador(userDetails);
+        LocalDate inicio = desde != null ? desde : LocalDate.now();
+        LocalDate fin = hasta != null ? hasta : inicio.plusDays(60);
+        return ResponseEntity.ok(ApiResponse.ok(bloqueoService.listarPropios(trabajador.getId(), inicio, fin)));
+    }
+
+    /**
+     * Bloquea una franja propia (201). El trabajador sale SIEMPRE del JWT:
+     * un {@code trabajadorId} en el cuerpo se ignora. 400 si la franja no es
+     * válida o el día no hay jornada; 409 (con las citas/bloqueos en
+     * conflicto en {@code data}) si pisa citas activas u otro bloqueo.
+     */
+    @PostMapping("/bloqueos")
+    public ResponseEntity<ApiResponse<BloqueoDTO>> crearBloqueo(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody BloqueoCreateRequest request) {
+        Trabajador trabajador = getTrabajador(userDetails);
+        BloqueoDTO dto = bloqueoService.crear(trabajador.getId(), request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(dto, "Horas bloqueadas"));
+    }
+
+    /** Elimina un bloqueo propio; uno ajeno o inexistente → 404. */
+    @DeleteMapping("/bloqueos/{id}")
+    public ResponseEntity<ApiResponse<Void>> eliminarBloqueo(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long id) {
+        Trabajador trabajador = getTrabajador(userDetails);
+        bloqueoService.eliminarPropio(trabajador.getId(), id);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Bloqueo eliminado"));
+    }
+
+    private static LocalDate lunesDeEstaSemana() {
+        return LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
     }
 
     private Trabajador getTrabajador(UserDetails userDetails) {

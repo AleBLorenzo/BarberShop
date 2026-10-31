@@ -115,6 +115,43 @@ public class EmailService {
         }
     }
 
+    /**
+     * Aviso de cancelación por el negocio (D7). Devuelve {@code true} si se
+     * envió o si el sistema está en modo log sin SMTP (cuenta como enviado
+     * para no llenar el panel de avisos en desarrollo; queda la línea
+     * {@code [MODO LOG]}); {@code false} si no hay email o el envío falla. Nunca
+     * propaga: la cancelación ya está confirmada.
+     */
+    public boolean enviarCancelacion(ReservaResponse r, String email, String motivo) {
+        if (email == null || email.isBlank()) {
+            log.debug("Reserva {} cancelada sin email: aviso telefónico", r.getId());
+            return false;
+        }
+        JavaMailSender mailSender = senderOrNull();
+        if (mailSender == null) {
+            log.info("[MODO LOG] Cancelacion de la reserva {} para {} ({}, {}): SMTP no configurado",
+                    r.getId(), email, r.getServicioNombre(), r.getFecha());
+            return true;
+        }
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(
+                    message, MimeMessageHelper.MULTIPART_MODE_RELATED, StandardCharsets.UTF_8.name());
+            helper.setFrom(from);
+            helper.setTo(email);
+            helper.setSubject("Cita cancelada en " + nombreNegocio + ": " + r.getServicioNombre()
+                    + " el " + r.getFecha().format(FECHA));
+            helper.setText(htmlCancelacion(r, motivo), true);
+            mailSender.send(message);
+            log.info("Aviso de cancelacion de la reserva {} enviado a {}", r.getId(), email);
+            return true;
+        } catch (Exception e) {
+            log.warn("No se pudo enviar el aviso de cancelacion a {} (reserva {}): {}",
+                    email, r.getId(), e.getMessage());
+            return false;
+        }
+    }
+
     /** Sender SMTP o null si no hay correo configurado (se usa en modo log). */
     private JavaMailSender senderOrNull() {
         if (!enabled) {
@@ -215,6 +252,50 @@ public class EmailService {
                 r.getFecha().format(FECHA),
                 r.getHoraInicio().format(HORA),
                 esc(mapsUrl),
+                esc(nombreNegocio)
+        );
+    }
+
+    /** Cancelación por el negocio: datos de la cita, motivo y enlace para reservar de nuevo. */
+    private String htmlCancelacion(ReservaResponse r, String motivo) {
+        String base = frontendBaseUrl.endsWith("/")
+                ? frontendBaseUrl.substring(0, frontendBaseUrl.length() - 1)
+                : frontendBaseUrl;
+        String filaMotivo = motivo != null && !motivo.isBlank()
+                ? "<tr style=\"background:#f8fafc\"><td><b>Motivo</b></td><td>" + esc(motivo) + "</td></tr>"
+                : "";
+        return """
+                <html><body style="font-family:Arial,Helvetica,sans-serif;color:#1f2933;line-height:1.5">
+                <div style="max-width:520px;margin:0 auto;padding:16px">
+                  <h2 style="color:#b91c1c;margin-bottom:4px">Tu cita ha sido cancelada</h2>
+                  <p>Hola <b>%s</b>, sentimos comunicarte que %s ha tenido que cancelar tu cita:</p>
+                  <table cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%%;border:1px solid #e5e7eb">
+                    <tr style="background:#f8fafc"><td><b>Servicio</b></td><td>%s</td></tr>
+                    <tr><td><b>Trabajador</b></td><td>%s</td></tr>
+                    <tr style="background:#f8fafc"><td><b>Fecha</b></td><td>%s</td></tr>
+                    <tr><td><b>Hora</b></td><td>%s</td></tr>
+                    %s
+                  </table>
+                  <p>Disculpa las molestias. Puedes elegir otro día y hora cuando quieras:</p>
+                  <p style="text-align:center;margin:24px 0">
+                    <a href="%s"
+                       style="background:#b8860b;color:#fff;padding:12px 24px;border-radius:6px;
+                              text-decoration:none;font-weight:bold">
+                      Reservar de nuevo
+                    </a>
+                  </p>
+                  <p style="color:#64748b;font-size:12px">%s · Este es un mensaje automático, no respondas a él.</p>
+                </div>
+                </body></html>
+                """.formatted(
+                esc(r.getClienteNombre()),
+                esc(nombreNegocio),
+                esc(r.getServicioNombre()),
+                esc(r.getTrabajadorNombre()),
+                r.getFecha().format(FECHA_LARGA),
+                r.getHoraInicio().format(HORA),
+                filaMotivo,
+                esc(base + "/reservar/servicio"),
                 esc(nombreNegocio)
         );
     }

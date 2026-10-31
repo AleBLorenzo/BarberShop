@@ -3,6 +3,7 @@ package com.barbershop.backend.controller.publico;
 import com.barbershop.backend.dto.ApiResponse;
 import com.barbershop.backend.dto.DisponibilidadRequest;
 import com.barbershop.backend.dto.DisponibilidadSlotDTO;
+import com.barbershop.backend.dto.HorarioDiaDTO;
 import com.barbershop.backend.dto.ReservaCancelRequest;
 import com.barbershop.backend.dto.ReservaCreateRequest;
 import com.barbershop.backend.dto.ReservaDTO;
@@ -12,6 +13,7 @@ import com.barbershop.backend.dto.ResultadoDTO;
 import com.barbershop.backend.dto.ReservaResponse;
 import com.barbershop.backend.dto.ServicioDTO;
 import com.barbershop.backend.dto.TrabajadorDTO;
+import com.barbershop.backend.service.AgendaService;
 import com.barbershop.backend.service.ResenaService;
 import com.barbershop.backend.service.ReservaService;
 import com.barbershop.backend.service.ResultadoService;
@@ -19,9 +21,11 @@ import com.barbershop.backend.service.ServicioService;
 import com.barbershop.backend.service.TrabajadorService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -34,6 +38,7 @@ public class PublicController {
     private final TrabajadorService trabajadorService;
     private final ResenaService resenaService;
     private final ResultadoService resultadoService;
+    private final AgendaService agendaService;
 
     @GetMapping("/servicios")
     public ResponseEntity<ApiResponse<List<ServicioDTO>>> getServicios() {
@@ -51,6 +56,25 @@ public class PublicController {
                 })
                 .toList();
         return ResponseEntity.ok(ApiResponse.ok(publicos));
+    }
+
+    /** Horario general real de la barbería (portada, D11). */
+    @GetMapping("/horario")
+    public ResponseEntity<ApiResponse<List<HorarioDiaDTO>>> getHorario() {
+        return ResponseEntity.ok(ApiResponse.ok(agendaService.getHorarioBarberia()));
+    }
+
+    /**
+     * Fechas sin jornada para el calendario público (D11): del trabajador
+     * indicado o, sin él, aquellas en que ningún trabajador reservable trabaja.
+     * Rango máximo 62 días (400 si se supera).
+     */
+    @GetMapping("/dias-cerrados")
+    public ResponseEntity<ApiResponse<List<LocalDate>>> getDiasCerrados(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+            @RequestParam(required = false) Long trabajadorId) {
+        return ResponseEntity.ok(ApiResponse.ok(agendaService.diasCerrados(desde, hasta, trabajadorId)));
     }
 
     /** Reseñas de la portada (gestionadas por el administrador). */

@@ -26,6 +26,9 @@ public class TrabajadorDTO {
 
     private Boolean activo;
 
+    /** ¿Aparece en la reserva pública? (D8). En peticiones: si no viene, se conserva. */
+    private Boolean reservable;
+
     /** Ruta pública de la foto, vacía o {@code null} si no tiene. */
     @Size(max = 255, message = "La ruta de la foto no puede exceder 255 caracteres")
     private String foto;

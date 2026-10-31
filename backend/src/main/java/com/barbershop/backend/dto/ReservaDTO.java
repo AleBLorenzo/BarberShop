@@ -33,6 +33,10 @@ public class ReservaDTO {
     /** "VISA" | "EFECTIVO"; null si la reserva no está completada o es anterior al cambio. */
     private String metodoPago;
     private UUID tokenCancelacion;
+    /** Motivo de la cancelación por el negocio (D6); null en el resto. */
+    private String motivoCancelacion;
+    /** "CLIENTE" | "ADMIN"; null si no está cancelada o es anterior al cambio. */
+    private String canceladaPor;
 
     private LocalDateTime createdAt;
 

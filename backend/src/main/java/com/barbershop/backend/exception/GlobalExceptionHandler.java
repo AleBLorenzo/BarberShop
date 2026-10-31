@@ -73,6 +73,19 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage(), ex.getErrorCode()));
     }
 
+    /** 409 con el detalle del conflicto en {@code data} (cierre duplicado, bloqueo sobre citas, D4/D5). */
+    @ExceptionHandler(ConflictoException.class)
+    public ResponseEntity<ApiResponse<Object>> handleConflicto(ConflictoException ex) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.<Object>builder()
+                        .success(false)
+                        .message(ex.getMessage())
+                        .errorCode(ex.getErrorCode())
+                        .data(ex.getDetalle())
+                        .build());
+    }
+
     @ExceptionHandler(TokenInvalidoException.class)
     public ResponseEntity<ApiResponse<Void>> handleTokenInvalido(TokenInvalidoException ex) {
         return ResponseEntity

@@ -27,6 +27,10 @@ public class ReservaResponse {
     /** "VISA" | "EFECTIVO"; null si no se registró método de pago. */
     private String metodoPago;
     private UUID tokenCancelacion;
+    /** Motivo de la cancelación por el negocio (D6); null en el resto. */
+    private String motivoCancelacion;
+    /** "CLIENTE" | "ADMIN"; null si no está cancelada o es anterior al cambio. */
+    private String canceladaPor;
     private BigDecimal precioTotal;
     private Integer duracionMinutos;
     private String mensaje;

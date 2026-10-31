@@ -7,12 +7,15 @@ import com.barbershop.backend.dto.ReservaCreateRequest;
 import com.barbershop.backend.dto.ReservaDTO;
 import com.barbershop.backend.dto.ReservaReprogramarRequest;
 import com.barbershop.backend.dto.ReservaResponse;
+import com.barbershop.backend.event.ReservaCanceladaPorNegocioEvent;
 import com.barbershop.backend.event.ReservaCreadaEvent;
 import com.barbershop.backend.event.ReservaCompletadaEvent;
 import com.barbershop.backend.exception.ResourceNotFoundException;
 import com.barbershop.backend.exception.SlotNotAvailableException;
 import com.barbershop.backend.exception.TokenInvalidoException;
 import com.barbershop.backend.mapper.ReservaMapper;
+import com.barbershop.backend.model.AvisoCancelacion;
+import com.barbershop.backend.model.CanceladaPor;
 import com.barbershop.backend.model.Cliente;
 import com.barbershop.backend.model.MetodoPago;
 import com.barbershop.backend.model.Reserva;
@@ -34,18 +37,14 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.format.TextStyle;
-import java.util.EnumSet;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -61,6 +60,12 @@ public class ReservaService {
     private final ClienteService clienteService;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final RateLimiterService rateLimiter;
+    private final AgendaService agendaService;
+    private final AvisoCancelacionService avisoCancelacionService;
+
+    private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final int MAX_MOTIVO = 255;
 
     @Value("${app.booking.token-expiration-hours:24}")
     private int tokenExpirationHours;
@@ -68,14 +73,8 @@ public class ReservaService {
     @Value("${app.booking.max-advance-days:60}")
     private int maxAdvanceDays;
 
-    @Value("${app.business.opening-hour:9}")
-    private int openingHour;
-
-    @Value("${app.business.closing-hour:20}")
-    private int closingHour;
-
-    @Value("${app.business.closed-days:SUNDAY}")
-    private String closedDaysProp;
+    // El horario ya no se lee de app.business.* (solo siembra, D9): la jornada
+    // efectiva sale de AgendaService (D2).
 
     // ========== PUBLIC BOOKING FLOW ==========
 
@@ -85,7 +84,7 @@ public class ReservaService {
         // Se comprueba ANTES de crear la reserva ni publicar ReservaCreadaEvent
         // → sobre el límite: 429 con Retry-After y sin envío de email.
         rateLimiter.registrarReserva(rateLimiter.ipReal());
-        return crearReservaInterna(request, request.getTrabajadorId());
+        return crearReservaInterna(request, request.getTrabajadorId(), true);
     }
 
     /**
@@ -94,10 +93,13 @@ public class ReservaService {
      */
     @Transactional
     public ReservaResponse crearReservaParaTrabajador(ReservaCreateRequest request, Long trabajadorId) {
-        return crearReservaInterna(request, trabajadorId);
+        // D8: el panel (incluido el admin desde "Mi panel") crea citas propias
+        // aunque el trabajador no sea reservable en la web.
+        return crearReservaInterna(request, trabajadorId, false);
     }
 
-    private ReservaResponse crearReservaInterna(ReservaCreateRequest request, Long trabajadorId) {
+    private ReservaResponse crearReservaInterna(ReservaCreateRequest request, Long trabajadorId,
+                                                boolean exigirReservable) {
         // Validate client data (server-side, also when the endpoint skips @Valid)
         validarDatosCliente(request);
 
@@ -116,15 +118,18 @@ public class ReservaService {
         if (!trabajador.getActivo()) {
             throw new IllegalArgumentException("El trabajador no está disponible");
         }
+        if (exigirReservable && !Boolean.TRUE.equals(trabajador.getReservable())) {
+            throw new IllegalArgumentException("El trabajador no admite reservas online");
+        }
 
-        // Validate date
+        // Validate date (pasado / antelación) y hora pasada
         validarFecha(request.getFecha());
-        validarHora(request.getFecha(), request.getHoraInicio(), servicio.getDuracionMinutos());
+        validarHoraNoPasada(request.getFecha(), request.getHoraInicio());
 
         // Validate time slot matches service duration - calculate horaFin from service duration
         LocalTime horaFin = request.getHoraInicio().plusMinutes(servicio.getDuracionMinutos());
 
-        // Check availability WITH locking to prevent double-booking
+        // Lock del trabajador + jornada, cierres, bloqueos y solapes (D3)
         checkAndLockAvailability(trabajador, request.getFecha(), request.getHoraInicio(), horaFin);
 
         // Find or create client (teléfono → email → crear; sin duplicar por email).
@@ -196,13 +201,15 @@ public class ReservaService {
         }
     }
 
+    /**
+     * Huecos por trabajador dentro de su jornada efectiva (D2): las citas
+     * activas y los bloqueos se marcan como ocupados; días cerrados o sin
+     * jornada no aportan huecos. Sin trabajadorId, solo activos y reservables
+     * (D8). Con trabajadorId explícito basta con que esté activo (el panel del
+     * trabajador lo usa para sus propias citas aunque no sea reservable).
+     */
     @Transactional(readOnly = true)
     public List<DisponibilidadSlotDTO> consultarDisponibilidad(DisponibilidadRequest request) {
-        // Días cerrados (domingos): no hay ningún hueco
-        if (diasCerrados().contains(request.getFecha().getDayOfWeek())) {
-            return List.of();
-        }
-
         Servicio servicio = servicioRepository.findById(request.getServicioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
 
@@ -215,7 +222,7 @@ public class ReservaService {
             }
             trabajadores = List.of(t);
         } else {
-            trabajadores = trabajadorRepository.findByActivoTrue();
+            trabajadores = trabajadorRepository.findByActivoTrueAndReservableTrue();
         }
 
         // Get all occupied slots for the date
@@ -225,35 +232,44 @@ public class ReservaService {
                 .filter(r -> r.getEstado() == ReservaEstado.PENDIENTE || r.getEstado() == ReservaEstado.CONFIRMADA)
                 .toList();
 
-        // Generate slots for each worker
         // Slots que ya han pasado hoy no se muestran (evita reservar a horas pasadas)
         boolean esHoy = request.getFecha().equals(LocalDate.now());
         LocalTime ahora = LocalTime.now();
 
-        return trabajadores.stream()
-                .flatMap(t -> {
-                    List<SlotGenerator.ReservaSlot> slotsOcupados = reservasOcupadas.stream()
-                            .filter(r -> r.getTrabajador().getId().equals(t.getId()))
-                            .map(r -> SlotGenerator.ReservaSlot.builder()
-                                    .inicio(r.getHoraInicio())
-                                    .fin(r.getHoraFin())
-                                    .build())
-                            .toList();
+        List<DisponibilidadSlotDTO> resultado = new ArrayList<>();
+        for (Trabajador t : trabajadores) {
+            Optional<AgendaService.Jornada> jornada = agendaService.jornadaEfectiva(t, request.getFecha());
+            if (jornada.isEmpty()) {
+                continue; // día cerrado, día libre, cierre del trabajador…
+            }
+            List<SlotGenerator.ReservaSlot> ocupados = new ArrayList<>();
+            reservasOcupadas.stream()
+                    .filter(r -> r.getTrabajador().getId().equals(t.getId()))
+                    .forEach(r -> ocupados.add(SlotGenerator.ReservaSlot.builder()
+                            .inicio(r.getHoraInicio())
+                            .fin(r.getHoraFin())
+                            .build()));
+            // Bloqueos (D5) = ocupados: el hueco aparece pero no disponible
+            jornada.get().bloqueos().forEach(b -> ocupados.add(SlotGenerator.ReservaSlot.builder()
+                    .inicio(b.inicio())
+                    .fin(b.fin())
+                    .build()));
 
-                    List<TimeSlot> allSlots = slotGenerator.generateSlotsForWorker(
-                            servicio.getDuracionMinutos(), slotsOcupados);
+            List<TimeSlot> allSlots = slotGenerator.generateSlotsForWorker(
+                    jornada.get().inicio(), jornada.get().fin(), servicio.getDuracionMinutos(), ocupados);
 
-                    return allSlots.stream()
-                            .filter(slot -> !esHoy || slot.getInicio().isAfter(ahora))
-                            .map(slot -> DisponibilidadSlotDTO.builder()
-                                    .horaInicio(slot.getInicio())
-                                    .horaFin(slot.getFin())
-                                    .disponible(slot.isDisponible())
-                                    .trabajadorId(t.getId())
-                                    .trabajadorNombre(t.getNombre())
-                                    .build());
-                })
-                .collect(Collectors.toList());
+            allSlots.stream()
+                    .filter(slot -> !esHoy || slot.getInicio().isAfter(ahora))
+                    .map(slot -> DisponibilidadSlotDTO.builder()
+                            .horaInicio(slot.getInicio())
+                            .horaFin(slot.getFin())
+                            .disponible(slot.isDisponible())
+                            .trabajadorId(t.getId())
+                            .trabajadorNombre(t.getNombre())
+                            .build())
+                    .forEach(resultado::add);
+        }
+        return resultado;
     }
 
     // ========== CANCEL / REPROGRAMAR WITH TOKEN ==========
@@ -271,8 +287,11 @@ public class ReservaService {
         }
 
         reserva.setEstado(ReservaEstado.CANCELADA);
+        // D6: cancelación del propio cliente → sin motivo ni aviso
+        reserva.setCanceladaPor(CanceladaPor.CLIENTE);
+        reserva.setMotivoCancelacion(null);
         reserva = reservaRepository.save(reserva);
-        log.info("Reserva cancelada: ID={}", reserva.getId());
+        log.info("Reserva cancelada por el cliente: ID={}", reserva.getId());
 
         return reservaMapper.toResponse(reserva);
     }
@@ -289,15 +308,14 @@ public class ReservaService {
             throw new TokenInvalidoException("No se puede reprogramar una reserva completada");
         }
 
-        // Validate new date
+        // Validate new date (pasado / antelación) y hora pasada
         validarFecha(request.getNuevaFecha());
-        validarHora(request.getNuevaFecha(), request.getNuevaHoraInicio(),
-                reserva.getServicio().getDuracionMinutos());
+        validarHoraNoPasada(request.getNuevaFecha(), request.getNuevaHoraInicio());
 
         // Validate new time matches service duration
         LocalTime expectedEnd = request.getNuevaHoraInicio().plusMinutes(reserva.getServicio().getDuracionMinutos());
 
-        // Check new availability (with lock)
+        // Lock del trabajador + jornada, cierres, bloqueos y solapes (D3)
         checkAndLockAvailability(reserva.getTrabajador(), request.getNuevaFecha(),
                 request.getNuevaHoraInicio(), expectedEnd);
 
@@ -427,12 +445,25 @@ public class ReservaService {
 
     @Transactional
     public ReservaDTO updateReservaAdmin(Long id, ReservaDTO dto) {
+        return updateReservaAdmin(id, dto, null);
+    }
+
+    /**
+     * Edición del admin. Si el estado pasa de activo (PENDIENTE/CONFIRMADA) a
+     * CANCELADA se delega en {@link #cancelarPorNegocio} (D6): no existe un
+     * camino de cancelación del admin sin motivo ni aviso al cliente.
+     */
+    @Transactional
+    public ReservaDTO updateReservaAdmin(Long id, ReservaDTO dto, Long adminId) {
         Reserva existing = reservaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada con ID: " + id));
 
+        ReservaEstado nuevoEstado = dto.getEstado() != null ? ReservaEstado.valueOf(dto.getEstado()) : null;
+        boolean cancelaActiva = nuevoEstado == ReservaEstado.CANCELADA && esActiva(existing.getEstado());
+
         // Update fields
-        if (dto.getEstado() != null) {
-            existing.setEstado(ReservaEstado.valueOf(dto.getEstado()));
+        if (nuevoEstado != null && !cancelaActiva) {
+            existing.setEstado(nuevoEstado);
         }
         if (dto.getFecha() != null) {
             existing.setFecha(dto.getFecha());
@@ -444,7 +475,63 @@ public class ReservaService {
             existing.setHoraFin(dto.getHoraFin());
         }
 
+        if (cancelaActiva) {
+            cancelarPorNegocio(existing, dto.getMotivoCancelacion(), adminId);
+            return reservaMapper.toDTO(existing);
+        }
         return reservaMapper.toDTO(reservaRepository.save(existing));
+    }
+
+    // ========== CANCELACIÓN POR EL NEGOCIO (D6, D7) ==========
+
+    /** {@code POST /api/admin/reservas/{id}/cancelar}. */
+    @Transactional
+    public ReservaDTO cancelarPorNegocio(Long reservaId, String motivo, Long adminId) {
+        Reserva reserva = reservaRepository.findById(reservaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada con ID: " + reservaId));
+        cancelarPorNegocio(reserva, motivo, adminId);
+        return reservaMapper.toDTO(reserva);
+    }
+
+    /**
+     * Cancelación hecha por el negocio (admin o cierre de día): solo citas
+     * PENDIENTE/CONFIRMADA (400 si no). Deja la cita CANCELADA con motivo y
+     * {@code canceladaPor = ADMIN}, crea su aviso (EMAIL/PENDIENTE_ENVIO o
+     * TELEFONO/PENDIENTE, D7) y publica el evento cuyo listener enviará el
+     * email tras el commit (un rollback no envía nada). Debe ejecutarse dentro
+     * de la transacción del llamador (p. ej. la creación de un cierre).
+     *
+     * @return el aviso creado (el llamador puede contar email/teléfono)
+     */
+    @Transactional
+    public AvisoCancelacion cancelarPorNegocio(Reserva reserva, String motivo, Long adminId) {
+        if (!esActiva(reserva.getEstado())) {
+            throw new IllegalArgumentException("Solo se pueden cancelar citas pendientes o confirmadas");
+        }
+        String motivoLimpio = motivo == null || motivo.isBlank() ? null : motivo.trim();
+        if (motivoLimpio != null && motivoLimpio.length() > MAX_MOTIVO) {
+            throw new IllegalArgumentException("El motivo no puede exceder " + MAX_MOTIVO + " caracteres");
+        }
+
+        reserva.setEstado(ReservaEstado.CANCELADA);
+        reserva.setMotivoCancelacion(motivoLimpio);
+        reserva.setCanceladaPor(CanceladaPor.ADMIN);
+        reservaRepository.save(reserva);
+
+        AvisoCancelacion aviso = avisoCancelacionService.registrar(reserva, motivoLimpio);
+        log.info("Reserva cancelada por el negocio: ID={}, admin={}, canal={}",
+                reserva.getId(), adminId, aviso.getCanal());
+
+        ReservaResponse snapshot = reservaMapper.toResponse(reserva);
+        snapshot.setMensaje("Reserva cancelada por la barbería");
+        String email = reserva.getCliente() != null ? reserva.getCliente().getEmail() : null;
+        applicationEventPublisher.publishEvent(
+                new ReservaCanceladaPorNegocioEvent(snapshot, email, aviso.getId(), motivoLimpio));
+        return aviso;
+    }
+
+    private static boolean esActiva(ReservaEstado estado) {
+        return estado == ReservaEstado.PENDIENTE || estado == ReservaEstado.CONFIRMADA;
     }
 
     @Transactional
@@ -457,73 +544,91 @@ public class ReservaService {
 
     // ========== PRIVATE HELPERS ==========
 
+    /** Pasado y antelación máxima; el "cerrado" lo decide la agenda (D2). */
     private void validarFecha(LocalDate fecha) {
         LocalDate hoy = LocalDate.now();
         if (fecha.isBefore(hoy)) {
             throw new IllegalArgumentException("No se pueden hacer reservas para fechas pasadas");
-        }
-        if (diasCerrados().contains(fecha.getDayOfWeek())) {
-            String dia = fecha.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.forLanguageTag("es"));
-            throw new IllegalArgumentException("La barbería está cerrada el " + dia);
         }
         if (fecha.isAfter(hoy.plusDays(maxAdvanceDays))) {
             throw new IllegalArgumentException("No se pueden hacer reservas con más de " + maxAdvanceDays + " días de antelación");
         }
     }
 
-    /**
-     * Rechaza horas pasadas (hoy) y las que se salgan de la jornada:
-     * empezar antes de la apertura o terminar después del cierre
-     * (la última cita es cierre − duración del servicio).
-     */
-    private void validarHora(LocalDate fecha, LocalTime horaInicio, int duracionMinutos) {
+    /** Rechaza horas ya pasadas si la fecha es hoy. */
+    private void validarHoraNoPasada(LocalDate fecha, LocalTime horaInicio) {
         if (fecha.equals(LocalDate.now()) && !horaInicio.isAfter(LocalTime.now())) {
             throw new IllegalArgumentException("La hora seleccionada ya ha pasado. Elige una hora futura.");
         }
-        if (horaInicio.isBefore(LocalTime.of(openingHour, 0))) {
-            throw new IllegalArgumentException(String.format(
-                    "La barbería abre a las %02d:00. Elige una hora igual o posterior.", openingHour));
-        }
-        if (horaInicio.plusMinutes(duracionMinutos).isAfter(LocalTime.of(closingHour, 0))) {
-            throw new IllegalArgumentException(String.format(
-                    "La última cita debe terminar a las %02d:00 como máximo (según la duración del servicio).",
-                    closingHour));
-        }
-    }
-
-    /** Días cerrados configurados (p. ej. SUNDAY) a partir de app.business.closed-days. */
-    private Set<DayOfWeek> diasCerrados() {
-        Set<DayOfWeek> dias = EnumSet.noneOf(DayOfWeek.class);
-        if (closedDaysProp == null || closedDaysProp.isBlank()) {
-            return dias;
-        }
-        for (String parte : closedDaysProp.split(",")) {
-            String limpio = parte.trim();
-            if (!limpio.isEmpty()) {
-                dias.add(DayOfWeek.valueOf(limpio.toUpperCase(Locale.ROOT)));
-            }
-        }
-        return dias;
     }
 
     /**
-     * Checks availability and locks the conflicting rows to prevent double-booking.
-     * Uses SELECT ... FOR UPDATE to lock the rows.
+     * Valida la cita contra la jornada efectiva del trabajador (D2): 400 si
+     * ese día no hay jornada ("La barbería está cerrada…" / "El trabajador no
+     * trabaja ese día") o si el servicio no cabe completo dentro de ella.
+     *
+     * @return la jornada del día (para comprobar bloqueos a continuación)
+     */
+    private AgendaService.Jornada validarHora(Trabajador trabajador, LocalDate fecha,
+                                             LocalTime horaInicio, LocalTime horaFin) {
+        AgendaService.DiaAgenda dia = agendaService.dia(trabajador, fecha);
+        if (!dia.trabaja()) {
+            throw new IllegalArgumentException(mensajeSinJornada(dia));
+        }
+        AgendaService.Jornada jornada = dia.jornada();
+        if (horaInicio.isBefore(jornada.inicio())) {
+            throw new IllegalArgumentException(String.format(
+                    "La jornada empieza a las %s. Elige una hora igual o posterior.",
+                    jornada.inicio().format(HORA)));
+        }
+        if (horaFin.isAfter(jornada.fin()) || horaFin.isBefore(horaInicio)) {
+            throw new IllegalArgumentException(String.format(
+                    "La última cita debe terminar a las %s como máximo (según la duración del servicio).",
+                    jornada.fin().format(HORA)));
+        }
+        return jornada;
+    }
+
+    private static String mensajeSinJornada(AgendaService.DiaAgenda dia) {
+        String motivo = dia.motivoCierre() != null && !dia.motivoCierre().isBlank()
+                ? " (" + dia.motivoCierre() + ")" : "";
+        return switch (dia.causa()) {
+            case BARBERIA_CERRADA -> AgendaService.describirSinJornada(dia);
+            case CIERRE_GENERAL -> "La barbería está cerrada el " + dia.fecha().format(FECHA) + motivo;
+            case TRABAJADOR_INACTIVO -> "El trabajador no está disponible";
+            case CIERRE_TRABAJADOR, DIA_LIBRE -> "El trabajador no trabaja ese día" + motivo;
+        };
+    }
+
+    /**
+     * Serializa la reserva con cierres, bloqueos y otras reservas del mismo
+     * trabajador (D3): adquiere PRIMERO el lock pesimista de la fila del
+     * trabajador y, ya bajo el lock, valida jornada y cierres (400) y solapes
+     * con bloqueos o citas activas (409). El lock por filas de reservas y la
+     * unique constraint se mantienen como defensa adicional.
      */
     private void checkAndLockAvailability(Trabajador trabajador, LocalDate fecha,
                                            LocalTime horaInicio, LocalTime horaFin) {
-        // First quick check without lock
-        if (reservaRepository.existsConflictingReserva(trabajador, fecha, horaInicio, horaFin)) {
+        Trabajador bloqueado = trabajadorRepository.findByIdForUpdate(trabajador.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Trabajador no encontrado"));
+
+        AgendaService.Jornada jornada = validarHora(bloqueado, fecha, horaInicio, horaFin);
+
+        if (!jornada.bloqueosSolapados(horaInicio, horaFin).isEmpty()) {
+            throw new SlotNotAvailableException("El horario seleccionado no está disponible: el trabajador lo tiene bloqueado");
+        }
+
+        if (reservaRepository.existsConflictingReserva(bloqueado, fecha, horaInicio, horaFin)) {
             throw new SlotNotAvailableException("El horario seleccionado ya no está disponible");
         }
 
         // Lock conflicting rows to prevent race condition
-        List<Reserva> conflicting = reservaRepository.findConflictingReservasForUpdate(trabajador, fecha);
+        List<Reserva> conflicting = reservaRepository.findConflictingReservasForUpdate(bloqueado, fecha);
 
         // Double-check after lock
         for (Reserva r : conflicting) {
             if (r.overlaps(Reserva.builder()
-                    .trabajador(trabajador)
+                    .trabajador(bloqueado)
                     .fecha(fecha)
                     .horaInicio(horaInicio)
                     .horaFin(horaFin)

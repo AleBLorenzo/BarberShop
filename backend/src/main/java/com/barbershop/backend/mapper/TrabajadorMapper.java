@@ -20,5 +20,7 @@ public interface TrabajadorMapper {
     @Mapping(target = "passwordHash", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "activo", source = "activo")
+    // D8: el alta no lo expone; queda el valor por defecto (true)
+    @Mapping(target = "reservable", ignore = true)
     Trabajador toEntity(TrabajadorCreateRequest request);
 }

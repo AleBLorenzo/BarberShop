@@ -45,6 +45,14 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     List<Reserva> findByTrabajadorAndFechaBetweenOrderByHoraInicioAsc(Trabajador trabajador, LocalDate start, LocalDate end);
     List<Reserva> findByTrabajadorAndFechaAndEstadoIn(Trabajador trabajador, LocalDate fecha, List<ReservaEstado> estados);
 
+    /** Citas de una fecha en los estados indicados (cierre general, D4). */
+    List<Reserva> findByFechaAndEstadoInOrderByHoraInicioAsc(LocalDate fecha, List<ReservaEstado> estados);
+
+    /** Citas activas del trabajador que se solapan con [horaInicio, horaFin) (bloqueos, D5). */
+    @Query("SELECT r FROM Reserva r WHERE r.trabajador.id = :trabajadorId AND r.fecha = :fecha AND r.horaInicio < :horaFin AND r.horaFin > :horaInicio AND r.estado IN ('PENDIENTE', 'CONFIRMADA') ORDER BY r.horaInicio ASC")
+    List<Reserva> findActivasSolapadas(@Param("trabajadorId") Long trabajadorId, @Param("fecha") LocalDate fecha,
+                                       @Param("horaInicio") LocalTime horaInicio, @Param("horaFin") LocalTime horaFin);
+
     // Find all reservations for a date range
     List<Reserva> findByFechaBetweenOrderByFechaAscHoraInicioAsc(LocalDate start, LocalDate end);
 
@@ -94,6 +102,15 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     List<Object[]> sumIngresosCompletadasPorMetodoPagoTrabajadorBetween(@Param("trabajador") Trabajador trabajador,
                                                                         @Param("start") LocalDate start,
                                                                         @Param("end") LocalDate end);
+
+    /**
+     * Ingresos agrupados por trabajador, estado y método de pago (D10):
+     * filas [trabajadorId, estado, metodoPago, suma, nº citas] de las reservas
+     * CONFIRMADA y COMPLETADA del rango (mismo criterio que el dashboard).
+     */
+    @Query("SELECT t.id, r.estado, r.metodoPago, SUM(s.precio), COUNT(r) FROM Reserva r JOIN r.servicio s JOIN r.trabajador t WHERE r.fecha BETWEEN :start AND :end AND r.estado IN ('CONFIRMADA', 'COMPLETADA') GROUP BY t.id, r.estado, r.metodoPago")
+    List<Object[]> sumIngresosPorTrabajadorEstadoMetodoBetween(@Param("start") LocalDate start,
+                                                               @Param("end") LocalDate end);
 
     /** ¿Existen reservas que referencian este servicio/trabajador? (borrado seguro) */
     boolean existsByServicio_Id(Long id);

@@ -1,6 +1,8 @@
 package com.barbershop.backend.service;
 
 import com.barbershop.backend.dto.DashboardStatsDTO;
+import com.barbershop.backend.dto.IngresoTrabajadorDTO;
+import com.barbershop.backend.dto.IngresosResumenDTO;
 import com.barbershop.backend.dto.TopServicioDTO;
 import com.barbershop.backend.dto.WorkerDashboardDTO;
 import com.barbershop.backend.mapper.ReservaMapper;
@@ -16,7 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -155,6 +161,89 @@ public class StatsService {
             }
         }
         return new BigDecimal[]{visa, efectivo};
+    }
+
+    /**
+     * Ingresos por trabajador en [start, end] (D10, solo ADMIN). Mismo
+     * criterio que {@link #getDashboardStats}: total = COMPLETADA +
+     * CONFIRMADA; desglose por método = solo COMPLETADA. Incluye a todos los
+     * trabajadores activos (aunque no tengan citas, con ceros) y a los
+     * inactivos que tengan citas en el rango; la suma de filas coincide con
+     * {@code ingresosTotales} del dashboard.
+     */
+    @Transactional(readOnly = true)
+    public IngresosResumenDTO getIngresosPorTrabajador(LocalDate start, LocalDate end) {
+        if (start == null || end == null || end.isBefore(start)) {
+            throw new IllegalArgumentException("La fecha fin debe ser igual o posterior a la fecha inicio");
+        }
+        Map<Long, IngresoTrabajadorDTO> filas = new LinkedHashMap<>();
+        for (Trabajador t : trabajadorRepository.findByActivoTrue()) {
+            filas.put(t.getId(), filaVacia(t));
+        }
+        for (Object[] fila : reservaRepository.sumIngresosPorTrabajadorEstadoMetodoBetween(start, end)) {
+            Long trabajadorId = (Long) fila[0];
+            ReservaEstado estado = (ReservaEstado) fila[1];
+            MetodoPago metodo = (MetodoPago) fila[2];
+            BigDecimal suma = fila[3] != null ? (BigDecimal) fila[3] : BigDecimal.ZERO;
+            long citas = fila[4] != null ? (Long) fila[4] : 0L;
+
+            IngresoTrabajadorDTO dto = filas.computeIfAbsent(trabajadorId, id -> trabajadorRepository.findById(id)
+                    .map(StatsService::filaVacia)
+                    .orElseGet(() -> filaVacia(null)));
+            acumular(dto, estado, metodo, suma, citas);
+        }
+
+        IngresoTrabajadorDTO totales = filaVacia(null);
+        for (IngresoTrabajadorDTO f : filas.values()) {
+            totales.setTotal(totales.getTotal().add(f.getTotal()));
+            totales.setVisa(totales.getVisa().add(f.getVisa()));
+            totales.setEfectivo(totales.getEfectivo().add(f.getEfectivo()));
+            totales.setSinMetodo(totales.getSinMetodo().add(f.getSinMetodo()));
+            totales.setCompletadas(totales.getCompletadas() + f.getCompletadas());
+            totales.setConfirmadas(totales.getConfirmadas() + f.getConfirmadas());
+        }
+
+        List<IngresoTrabajadorDTO> ordenadas = new ArrayList<>(filas.values());
+        ordenadas.sort(Comparator.comparing(IngresoTrabajadorDTO::getTotal).reversed()
+                .thenComparing(f -> f.getNombre() != null ? f.getNombre() : ""));
+        return IngresosResumenDTO.builder()
+                .inicio(start)
+                .fin(end)
+                .filas(ordenadas)
+                .totales(totales)
+                .build();
+    }
+
+    private static void acumular(IngresoTrabajadorDTO dto, ReservaEstado estado, MetodoPago metodo,
+                                 BigDecimal suma, long citas) {
+        dto.setTotal(dto.getTotal().add(suma));
+        if (estado == ReservaEstado.COMPLETADA) {
+            dto.setCompletadas(dto.getCompletadas() + citas);
+            if (metodo == MetodoPago.VISA) {
+                dto.setVisa(dto.getVisa().add(suma));
+            } else if (metodo == MetodoPago.EFECTIVO) {
+                dto.setEfectivo(dto.getEfectivo().add(suma));
+            } else {
+                dto.setSinMetodo(dto.getSinMetodo().add(suma));
+            }
+        } else {
+            dto.setConfirmadas(dto.getConfirmadas() + citas);
+        }
+    }
+
+    private static IngresoTrabajadorDTO filaVacia(Trabajador t) {
+        return IngresoTrabajadorDTO.builder()
+                .trabajadorId(t != null ? t.getId() : null)
+                .nombre(t != null ? t.getNombre() : null)
+                .rol(t != null && t.getRol() != null ? t.getRol().name() : null)
+                .activo(t != null ? t.getActivo() : null)
+                .total(BigDecimal.ZERO)
+                .visa(BigDecimal.ZERO)
+                .efectivo(BigDecimal.ZERO)
+                .sinMetodo(BigDecimal.ZERO)
+                .completadas(0L)
+                .confirmadas(0L)
+                .build();
     }
 
     private double calcularTasaOcupacion(LocalDate start, LocalDate end) {

@@ -35,6 +35,15 @@ public class Trabajador {
     @Column(name = "activo", nullable = false)
     private Boolean activo = true;
 
+    /**
+     * ¿Aparece en la reserva pública? (D8). Por defecto {@code true}, también
+     * para las filas existentes: el DEFAULT a nivel de columna permite a
+     * {@code ddl-auto=update} añadir la columna NOT NULL sobre tablas con datos.
+     */
+    @Builder.Default
+    @Column(name = "reservable", nullable = false, columnDefinition = "boolean default true")
+    private Boolean reservable = true;
+
     /** Ruta pública de la foto del trabajador (p. ej. {@code /uploads/trabajadores/x.jpg}). */
     @Column(length = 255)
     private String foto;

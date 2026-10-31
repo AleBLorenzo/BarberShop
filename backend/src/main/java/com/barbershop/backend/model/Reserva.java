@@ -68,6 +68,15 @@ public class Reserva {
     @Column(name = "metodo_pago", length = 20)
     private MetodoPago metodoPago;
 
+    /** Motivo de la cancelación hecha por el negocio (D6); null en el resto. */
+    @Column(name = "motivo_cancelacion", length = 255)
+    private String motivoCancelacion;
+
+    /** Quién canceló la reserva (D6); null si no está cancelada o es anterior al cambio. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancelada_por", length = 20)
+    private CanceladaPor canceladaPor;
+
     @Column(name = "token_cancelacion", nullable = false, unique = true, length = 36)
     private String tokenCancelacion;
 

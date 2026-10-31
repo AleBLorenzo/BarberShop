@@ -37,9 +37,14 @@ public class TrabajadorService {
                 .toList();
     }
 
+    /**
+     * Trabajadores de la reserva pública (D8): activos Y reservables. El resto
+     * de usos de "activos" (estadísticas, búsqueda interna) no filtran
+     * {@code reservable}: un admin no reservable sigue siendo un trabajador activo.
+     */
     @Transactional(readOnly = true)
     public List<TrabajadorDTO> findAllActivos() {
-        return trabajadorRepository.findByActivoTrue().stream()
+        return trabajadorRepository.findByActivoTrueAndReservableTrue().stream()
                 .map(trabajadorMapper::toDTO)
                 .toList();
     }
@@ -99,6 +104,11 @@ public class TrabajadorService {
         // igual que el resto de campos de este update.
         existing.setFoto(dto.getFoto());
         existing.setDescripcion(dto.getDescripcion());
+        // reservable (D8): solo se cambia si viene explícito (clientes antiguos
+        // del panel no lo envían → se conserva, nunca se pone a null)
+        if (dto.getReservable() != null) {
+            existing.setReservable(dto.getReservable());
+        }
         // rol: solo se cambia si viene explícito (el panel no lo envía → se conserva)
         if (dto.getRol() != null) {
             existing.setRol(dto.getRol());
