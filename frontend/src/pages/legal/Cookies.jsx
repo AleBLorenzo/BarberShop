@@ -1,5 +1,13 @@
+import { useSeo } from '../../components/Seo';
+
 /** Política de cookies: refleja exactamente lo que la app guarda en el navegador. */
 export default function Cookies() {
+  // Página pública indexable (spec `seo-meta`; D2): sin noindex.
+  useSeo({
+    title: 'Política de cookies — TheTankBarber',
+    description: 'TheTankBarber no usa cookies propias: qué almacenamiento local utiliza y por qué no necesita consentimiento previo.',
+  });
+
   return (
     <article style={{ maxWidth: 760, margin: '0 auto' }}>
       <h1>Política de cookies</h1>

@@ -7,6 +7,7 @@ import { useBooking } from '../../hooks/useBooking';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import { LuCircleCheck, LuCalendar } from 'react-icons/lu';
+import { useSeo } from '../../components/Seo';
 
 const STORAGE_KEY = 'lastReserva';
 
@@ -27,6 +28,13 @@ function loadStored() {
  * sessionStorage.
  */
 export default function BookingSuccess() {
+  // Recibo de la reserva (transitorio, D2). Solo tiene título: no lleva
+  // noindex porque el diseño reserva esa directiva a las rutas de la spec.
+  useSeo({
+    title: 'Cita confirmada — TheTankBarber',
+    description: 'Tu cita en TheTankBarber se ha registrado correctamente.',
+  });
+
   const { state } = useLocation();
   const { clearDraft } = useBooking();
   const [copied, setCopied] = useState(false);

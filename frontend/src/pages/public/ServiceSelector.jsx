@@ -6,11 +6,18 @@ import PriceWithOffer from '../../components/ui/PriceWithOffer';
 import { SkeletonGrid } from '../../components/ui/Skeleton';
 import { ErrorState } from '../../components/ui/EmptyState';
 import Button from '../../components/ui/Button';
+import { useSeo } from '../../components/Seo';
 
 /**
  * Booking step 1: service selection.
  */
 export default function ServiceSelector() {
+  // Paso 1 del flujo de reserva; entrada pública indexable (spec `seo-meta`).
+  useSeo({
+    title: 'Reservar cita — TheTankBarber',
+    description: 'Elige el servicio que quieres: cortes, degradados, barba y estilos personalizados. Reserva online en TheTankBarber.',
+  });
+
   const { draft, updateDraft } = useBooking();
   const navigate = useNavigate();
   const [servicios, setServicios] = useState([]);

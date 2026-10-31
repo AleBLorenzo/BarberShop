@@ -8,6 +8,7 @@ import { ErrorState } from '../../components/ui/EmptyState';
 import Avatar from '../../components/ui/Avatar';
 import ContactMap from '../../components/ContactMap';
 import { LuStar, LuMapPin, LuPhone, LuMail, LuClock, LuScissors, LuSparkles, LuBrush, LuArrowRight, LuInstagram } from 'react-icons/lu';
+import { useSeo } from '../../components/Seo';
 
 /** Términos del marquee de servicios bajo el hero (decorativo). */
 const MARQUEE_ITEMS = [
@@ -80,6 +81,13 @@ function Estrellas({ puntuacion }) {
  * Public landing page: hero, services, workers, reviews, contact.
  */
 export default function Landing() {
+  // Título/descripción de la portada (gestor de <head>, D2). Son los mismos
+  // valores base de index.html: la portada es el estado «en reposo» de la SPA.
+  useSeo({
+    title: `${NOMBRE} — Reserva tu cita`,
+    description: 'The Tank Barber es una barbería moderna en Tenerife. Cortes de cabello, degradados, arreglos de barba y estilos personalizados con atención cercana.',
+  });
+
   const [servicios, setServicios] = useState([]);
   const [trabajadores, setTrabajadores] = useState([]);
   const [resenas, setResenas] = useState([]);

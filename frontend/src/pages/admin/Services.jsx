@@ -9,6 +9,7 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import { Input, Label } from '../../components/ui/Input';
 import { useToast } from '../../hooks/useToast';
+import { useSeo } from '../../components/Seo';
 
 const PAGE_SIZE = 10;
 const CARPETA = 'servicios';
@@ -17,6 +18,13 @@ const CARPETA = 'servicios';
  * Admin services CRUD page. Backend returns the full list: pagination is client-side.
  */
 export default function AdminServices() {
+  // Panel privado: noindex (spec `seo-meta`; D2).
+  useSeo({
+    title: 'Servicios (admin) — TheTankBarber',
+    description: 'Gestión del catálogo de servicios de TheTankBarber: precios, duración y ofertas. Área privada.',
+    noindex: true,
+  });
+
   const toast = useToast();
   const [servicios, setServicios] = useState([]);
   const [loading, setLoading] = useState(true);

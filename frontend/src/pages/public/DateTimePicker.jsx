@@ -10,6 +10,7 @@ import TimeSlotPicker from '../../components/ui/TimeSlotPicker';
 import { ErrorState } from '../../components/ui/EmptyState';
 import Spinner from '../../components/ui/Spinner';
 import Button from '../../components/ui/Button';
+import { useSeo } from '../../components/Seo';
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -17,6 +18,12 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
  * Booking step 3: date + time slot selection.
  */
 export default function DateTimePicker() {
+  // Paso 3 del flujo de reserva (D2).
+  useSeo({
+    title: 'Elegir fecha y hora — TheTankBarber',
+    description: 'Selecciona el día y la hora de tu cita en TheTankBarber.',
+  });
+
   const { draft, updateDraft } = useBooking();
   const navigate = useNavigate();
   const location = useLocation();

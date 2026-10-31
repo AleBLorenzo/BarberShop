@@ -2325,3 +2325,31 @@ html {
   position: absolute;
   inset: 0;
 }
+
+/* ---------- 404 ---------- */
+.not-found {
+  padding-top: var(--space-2xl);
+  padding-bottom: var(--space-2xl);
+}
+
+.not-found__code {
+  margin: 0;
+  font-size: var(--font-size-3xl);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: var(--tracking-display);
+  color: var(--text-h);
+}
+
+.not-found__title {
+  margin-top: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.not-found__actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: var(--space-md);
+}

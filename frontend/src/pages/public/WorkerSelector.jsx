@@ -7,11 +7,18 @@ import { ErrorState } from '../../components/ui/EmptyState';
 import Avatar from '../../components/ui/Avatar';
 import Button from '../../components/ui/Button';
 import { LuUsers } from 'react-icons/lu';
+import { useSeo } from '../../components/Seo';
 
 /**
  * Booking step 2: worker selection with "Cualquiera" option.
  */
 export default function WorkerSelector() {
+  // Paso 2 del flujo de reserva (estado en memoria, no indexable; D2).
+  useSeo({
+    title: 'Elegir barbero — TheTankBarber',
+    description: 'Selecciona a tu barbero preferido o deja que te asignemos el primero disponible en TheTankBarber.',
+  });
+
   const { draft, updateDraft } = useBooking();
   const navigate = useNavigate();
   const [trabajadores, setTrabajadores] = useState([]);

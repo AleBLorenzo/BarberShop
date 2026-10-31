@@ -1,8 +1,15 @@
 import { Link } from 'react-router-dom';
 import { HORARIO_TEXTO, NOMBRE } from '../../config/business';
+import { useSeo } from '../../components/Seo';
 
 /** Términos de uso del servicio de reservas, coherentes con el comportamiento real. */
 export default function Terminos() {
+  // Página pública indexable (spec `seo-meta`; D2): sin noindex.
+  useSeo({
+    title: 'Términos y condiciones — TheTankBarber',
+    description: 'Condiciones de uso del servicio de reservas en línea de TheTankBarber: reservas, cambios y cancelaciones.',
+  });
+
   return (
     <article style={{ maxWidth: 760, margin: '0 auto' }}>
       <h1>Términos y condiciones de uso</h1>

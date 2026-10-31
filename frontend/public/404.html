@@ -1,0 +1,132 @@
+<!doctype html>
+<!--
+  Página 404 ESTÁTICA (sin JavaScript) — cambio `mobile-first-audit-and-web-essentials`, D1.
+
+  La sirve nginx como `error_page 404 /404.html` (ver deploy/nginx-barbershop.conf)
+  con un HTTP 404 REAL: en una carga en frío de una URL desconocida el visitante
+  (y Googlebot sin ejecutar JS) recibe el código 404 y este contenido, sin cargar
+  el bundle. Su gemela en la SPA es frontend/src/pages/public/NotFound.jsx, que se
+  renderiza cuando la navegación de cliente llega a una ruta inexistente.
+
+  OJO: al ir por el `location /` de nginx hereda la CSP de producción
+  (style-src 'self' 'unsafe-inline' ⇒ los estilos en línea de aquí están permitidos).
+  No añadir scripts ni recursos de terceros.
+-->
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <title>Página no encontrada — TheTankBarber</title>
+    <meta
+      name="description"
+      content="La página que buscas no existe o se ha movido. Vuelve a la portada o reserva tu cita en TheTankBarber."
+    />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <style>
+      :root {
+        --bg: #f5f5f5;
+        --card-bg: #ffffff;
+        --text: #0a0a0a;
+        --muted: #737373;
+        --border: #e5e5e5;
+        --accent: #0a0a0a;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0a0a0a;
+          --card-bg: #171717;
+          --text: #f5f5f5;
+          --muted: #a1a1a1;
+          --border: #2a2a2a;
+          --accent: #f5f5f5;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Geist', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        font-size: 14px;
+        line-height: 1.43;
+        -webkit-font-smoothing: antialiased;
+      }
+      main {
+        max-width: 480px;
+        width: 100%;
+        text-align: center;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 40px 24px;
+      }
+      .code {
+        margin: 0;
+        font-size: 48px;
+        font-weight: 600;
+        line-height: 1;
+        letter-spacing: -2.4px;
+        color: var(--text);
+      }
+      h1 {
+        margin: 16px 0 8px;
+        font-size: 24px;
+        font-weight: 600;
+        letter-spacing: -0.6px;
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+        margin-top: 24px;
+      }
+      a.btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 18px;
+        border: 1px solid var(--accent);
+        background: var(--accent);
+        color: var(--card-bg);
+        font-weight: 500;
+        text-decoration: none;
+      }
+      a.btn.secondary {
+        background: transparent;
+        color: var(--text);
+        border-color: var(--border);
+      }
+      a.btn:focus-visible {
+        outline: 2px solid var(--text);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="code" aria-hidden="true">404</p>
+      <h1>Página no encontrada</h1>
+      <p>La página que buscas no existe o se ha movido. Comprueba la dirección o vuelve a empezar.</p>
+      <div class="actions">
+        <a class="btn" href="/">Volver a la portada</a>
+        <a class="btn secondary" href="/reservar/servicio">Reservar cita</a>
+      </div>
+    </main>
+  </body>
+</html>

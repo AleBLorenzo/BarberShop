@@ -7,11 +7,19 @@ import PageHeader from '../../components/ui/PageHeader';
 import DatePicker from '../../components/ui/DatePicker';
 import Spinner from '../../components/ui/Spinner';
 import { ErrorState } from '../../components/ui/EmptyState';
+import { useSeo } from '../../components/Seo';
 
 /**
  * Admin dashboard: metrics cards + top services chart + date range.
  */
 export default function AdminDashboard() {
+  // Panel privado: noindex (spec `seo-meta`; D2).
+  useSeo({
+    title: 'Panel de administración — TheTankBarber',
+    description: 'Métricas y resumen de la actividad de TheTankBarber. Área privada.',
+    noindex: true,
+  });
+
   const [searchParams, setSearchParams] = useSearchParams();
   const startParam = searchParams.get('start');
   const endParam = searchParams.get('end');

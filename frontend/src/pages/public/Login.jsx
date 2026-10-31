@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/ui/Button';
 import { Input, Label } from '../../components/ui/Input';
+import { useSeo } from '../../components/Seo';
 
 // CAPTCHA Turnstile opcional (3.8): el widget SOLO se carga si el propietario
 // define la clave pública por env var. Deshabilitado (default) → cero widget
@@ -16,6 +17,13 @@ const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '';
  * Login page with form validation and redirect preservation.
  */
 export default function Login() {
+  // Zona de sesión: noindex + título propio (spec `seo-meta`; D2).
+  useSeo({
+    title: 'Iniciar sesión — TheTankBarber',
+    description: 'Accede a tu área personal de TheTankBarber para gestionar tu perfil y tus citas.',
+    noindex: true,
+  });
+
   const { login, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

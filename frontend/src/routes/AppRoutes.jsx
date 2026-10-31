@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import PublicLayout from '../components/layout/PublicLayout';
 import DashLayout from '../components/layout/DashLayout';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -9,8 +9,11 @@ import { LuScissors } from 'react-icons/lu';
 // Public pages — Landing y Login quedan EAGER (primer pintado: raíz + acceso).
 // El resto de páginas públicas (flujo de reserva, citas, legales) se cargan
 // bajo demanda para no inflar el bundle inicial en redes lentas.
+// NotFound también es EAGER: es el catch-all del router y debe pintar sin esperar
+// a un chunk (una URL rota no debe mostrar un spinner).
 import Landing from '../pages/public/Landing';
 import Login from '../pages/public/Login';
+import NotFound from '../pages/public/NotFound';
 
 const ServiceSelector = lazy(() => import('../pages/public/ServiceSelector'));
 const WorkerSelector = lazy(() => import('../pages/public/WorkerSelector'));
@@ -73,6 +76,20 @@ export default function AppRoutes() {
           <Route path="/legal/privacidad" element={<Privacidad />} />
           <Route path="/legal/terminos" element={<Terminos />} />
           <Route path="/legal/cookies" element={<Cookies />} />
+
+          {/*
+            Catch-all 404 (cambio mobile-first-audit-and-web-essentials, D1).
+            Antes: <Route path="*" element={<Navigate to="/" replace/>} /> ⇒
+            soft-404 (redirección silenciosa a la portada). Ahora la ruta
+            desconocida se queda aquí y muestra la página 404 con enlaces a `/`
+            y `/reservar/servicio`. Va DENTRO de <PublicLayout/> a propósito:
+            así la 404 conserva la cabecera/pie del sitio (identidad visual) y
+            la navegación de recuperación. MANTENER EN SYNC con la allowlist de
+            `deploy/nginx-barbershop.conf` (ver comentario allí): nginx sirve
+            `index.html` para las rutas de arriba y devuelve 404 real para el
+            resto de cargas en frío.
+          */}
+          <Route path="*" element={<NotFound />} />
         </Route>
 
         {/* Worker */}
@@ -113,8 +130,6 @@ export default function AppRoutes() {
           <Route path="resultados" element={<AdminResultados />} />
           <Route path="reservas" element={<AdminReservations />} />
         </Route>
-
-        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </ErrorBoundary>
   );

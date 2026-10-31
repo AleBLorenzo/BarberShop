@@ -8,6 +8,7 @@ import TimeSlotPicker from '../../components/ui/TimeSlotPicker';
 import Button from '../../components/ui/Button';
 import Spinner from '../../components/ui/Spinner';
 import { ErrorState } from '../../components/ui/EmptyState';
+import { useSeo } from '../../components/Seo';
 
 /**
  * Reschedule page reusing date/time picking for an existing token.
@@ -15,6 +16,14 @@ import { ErrorState } from '../../components/ui/EmptyState';
  * y no depende ni muestra el email del cliente.
  */
 export default function Reschedule() {
+  // Flujo con token de cancelación/reprogramación: noindex (filtra tokens; spec
+  // `seo-meta` + regla `Disallow: /reprogramar/` de robots.txt).
+  useSeo({
+    title: 'Reprogramar cita — TheTankBarber',
+    description: 'Cambia la fecha y la hora de tu cita en TheTankBarber.',
+    noindex: true,
+  });
+
   const { token } = useParams();
   const navigate = useNavigate();
   const [fecha, setFecha] = useState(format(new Date(), 'yyyy-MM-dd'));

@@ -1,8 +1,15 @@
 import { Link } from 'react-router-dom';
 import { NOMBRE, EMAIL_CONTACTO, TELEFONO, DIRECCION } from '../../config/business';
+import { useSeo } from '../../components/Seo';
 
 /** Política de privacidad ajustada al tratamiento real de datos de la app. */
 export default function Privacidad() {
+  // Página pública indexable (spec `seo-meta`; D2): sin noindex.
+  useSeo({
+    title: 'Política de privacidad — TheTankBarber',
+    description: 'Cómo trata TheTankBarber tus datos personales al reservar una cita: responsable, finalidad, base legal, plazos y derechos.',
+  });
+
   return (
     <article style={{ maxWidth: 760, margin: '0 auto' }}>
       <h1>Política de privacidad</h1>

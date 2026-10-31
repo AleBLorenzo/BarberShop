@@ -7,6 +7,7 @@ import { formatDate, formatTime } from '../../utils/date';
 import Button from '../../components/ui/Button';
 import PriceWithOffer from '../../components/ui/PriceWithOffer';
 import { Input, Label } from '../../components/ui/Input';
+import { useSeo } from '../../components/Seo';
 
 // Spanish phone: +34 prefix optional, 9 or 6/7 first digit, 9 digits total
 const PHONE_PATTERN = /^(?:\+34\s?)?[679]\d{2}[\s-]?\d{3}[\s-]?\d{3}$/;
@@ -20,6 +21,12 @@ const EMAIL_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
  * Booking step 4: summary + client details form + submit.
  */
 export default function BookingConfirm() {
+  // Paso 4 del flujo de reserva (D2).
+  useSeo({
+    title: 'Confirmar cita — TheTankBarber',
+    description: 'Revisa los datos de tu cita y confírmala en TheTankBarber.',
+  });
+
   const { draft, updateDraft } = useBooking();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState(null);

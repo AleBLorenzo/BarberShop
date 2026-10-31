@@ -7,6 +7,7 @@ import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import { Input, Label } from '../../components/ui/Input';
 import { useToast } from '../../hooks/useToast';
+import { useSeo } from '../../components/Seo';
 
 const PAGE_SIZE = 8;
 const CARPETA = 'resultados';
@@ -18,6 +19,13 @@ const URL_ERROR = 'Debe empezar por http://, https:// o /uploads/';
  * landing page. Backend returns the full list: pagination is client-side.
  */
 export default function AdminResultados() {
+  // Panel privado: noindex (spec `seo-meta`; D2).
+  useSeo({
+    title: 'Resultados (admin) — TheTankBarber',
+    description: 'Gestión de la galería de resultados de TheTankBarber. Área privada.',
+    noindex: true,
+  });
+
   const toast = useToast();
   const [fotos, setFotos] = useState([]);
   const [loading, setLoading] = useState(true);

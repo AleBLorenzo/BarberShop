@@ -9,6 +9,7 @@ import { estadoToLabel } from '../../utils/estado';
 import { Input, Select, Label } from '../../components/ui/Input';
 import DatePicker from '../../components/ui/DatePicker';
 import { useToast } from '../../hooks/useToast';
+import { useSeo } from '../../components/Seo';
 
 const PAGE_SIZE = 20;
 const ESTADOS = ['PENDIENTE', 'CONFIRMADA', 'COMPLETADA', 'CANCELADA', 'NO_ASISTIO'];
@@ -17,6 +18,13 @@ const ESTADOS = ['PENDIENTE', 'CONFIRMADA', 'COMPLETADA', 'CANCELADA', 'NO_ASIST
  * Admin global reservations page with filters, status override and edit.
  */
 export default function AdminReservations() {
+  // Panel privado con datos de clientes: noindex (spec `seo-meta`; D2).
+  useSeo({
+    title: 'Reservas (admin) — TheTankBarber',
+    description: 'Gestión de todas las reservas de TheTankBarber: filtros, estados y edición. Área privada.',
+    noindex: true,
+  });
+
   const toast = useToast();
   const [reservas, setReservas] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import { Input, Label, Textarea } from '../../components/ui/Input';
 import { useToast } from '../../hooks/useToast';
+import { useSeo } from '../../components/Seo';
 
 const PAGE_SIZE = 10;
 const CARPETA = 'trabajadores';
@@ -17,6 +18,13 @@ const CARPETA = 'trabajadores';
  * The backend returns the full list, so search and pagination are client-side.
  */
 export default function AdminWorkers() {
+  // Panel privado: noindex (spec `seo-meta`; D2).
+  useSeo({
+    title: 'Trabajadores (admin) — TheTankBarber',
+    description: 'Gestión del equipo de TheTankBarber: alta, edición, activación y baja. Área privada.',
+    noindex: true,
+  });
+
   const toast = useToast();
   const [trabajadores, setTrabajadores] = useState([]);
   const [loading, setLoading] = useState(true);

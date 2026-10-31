@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button';
 import { Input, Label, Select } from '../../components/ui/Input';
 import { useToast } from '../../hooks/useToast';
 import { LuStar } from 'react-icons/lu';
+import { useSeo } from '../../components/Seo';
 
 const PAGE_SIZE = 10;
 
@@ -33,6 +34,13 @@ function Estrellas({ puntuacion }) {
  * Backend returns the full list: pagination is client-side.
  */
 export default function AdminResenas() {
+  // Panel privado: noindex (spec `seo-meta`; D2).
+  useSeo({
+    title: 'Reseñas (admin) — TheTankBarber',
+    description: 'Moderación de las reseñas de clientes de TheTankBarber. Área privada.',
+    noindex: true,
+  });
+
   const toast = useToast();
   const [resenas, setResenas] = useState([]);
   const [loading, setLoading] = useState(true);

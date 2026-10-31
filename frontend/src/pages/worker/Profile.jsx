@@ -8,6 +8,7 @@ import { Input, Textarea } from '../../components/ui/Input';
 import { ErrorState } from '../../components/ui/EmptyState';
 import { useToast } from '../../hooks/useToast';
 import { LuCheck, LuPause } from 'react-icons/lu';
+import { useSeo } from '../../components/Seo';
 
 // Email obligatorio: la confirmación de la cita y las notificaciones llegan aquí
 const EMAIL_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
@@ -16,6 +17,13 @@ const EMAIL_PATTERN = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
  * Worker profile page with photo and details, editable (name, email, photo).
  */
 export default function WorkerProfile() {
+  // Panel privado del trabajador: noindex (spec `seo-meta`; D2).
+  useSeo({
+    title: 'Mi perfil — TheTankBarber',
+    description: 'Edita tus datos y tu foto de perfil en TheTankBarber. Área privada.',
+    noindex: true,
+  });
+
   const toast = useToast();
   const [perfil, setPerfil] = useState(null);
   const [loading, setLoading] = useState(true);

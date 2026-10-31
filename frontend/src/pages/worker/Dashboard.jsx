@@ -15,6 +15,7 @@ import { EmptyState, ErrorState } from '../../components/ui/EmptyState';
 import { formatCurrency } from '../../utils/date';
 import { useToast } from '../../hooks/useToast';
 import { LuChevronLeft, LuChevronRight, LuRefreshCw } from 'react-icons/lu';
+import { useSeo } from '../../components/Seo';
 
 // La barbería cierra los domingos: la semana se muestra de lunes a sábado
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -37,6 +38,13 @@ const emptyForm = () => ({
  * Worker dashboard: weekly summary + day detail + reservation actions.
  */
 export default function WorkerDashboard() {
+  // Panel privado del trabajador: noindex (spec `seo-meta`; D2).
+  useSeo({
+    title: 'Panel de trabajador — TheTankBarber',
+    description: 'Gestión de tu agenda y tus citas en TheTankBarber. Área privada.',
+    noindex: true,
+  });
+
   const {
     semana,
     reservasMes,

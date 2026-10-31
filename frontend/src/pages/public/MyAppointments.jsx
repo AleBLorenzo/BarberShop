@@ -9,6 +9,7 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import { Input, Label } from '../../components/ui/Input';
 import { EmptyState, ErrorState } from '../../components/ui/EmptyState';
+import { useSeo } from '../../components/Seo';
 
 /**
  * Client appointments lookup by phone + token.
@@ -16,6 +17,13 @@ import { EmptyState, ErrorState } from '../../components/ui/EmptyState';
  * cancelación usan teléfono + token y no dependen ni muestran el email.
  */
 export default function MyAppointments() {
+  // Zona de sesión con datos privados: noindex (spec `seo-meta`; D2).
+  useSeo({
+    title: 'Mis citas — TheTankBarber',
+    description: 'Consulta, cancela o reprograma tus citas en TheTankBarber con tu teléfono y token.',
+    noindex: true,
+  });
+
   const navigate = useNavigate();
   const [reservas, setReservas] = useState(null);
   const [loading, setLoading] = useState(false);
