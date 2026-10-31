@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { addDays, format } from 'date-fns';
+import { addDays, format, parseISO, startOfMonth } from 'date-fns';
 import { publicApi } from '../../services/api';
 import { dedupeSlots } from '../../utils/slots';
+import { useDiasCerrados } from '../../hooks/useDiasCerrados';
 import CalendarPicker from '../../components/ui/CalendarPicker';
 import TimeSlotPicker from '../../components/ui/TimeSlotPicker';
 import Button from '../../components/ui/Button';
@@ -33,6 +34,13 @@ export default function Reschedule() {
   const [error, setError] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [servicioId, setServicioId] = useState(null);
+
+  // Días cerrados del mes visible (D12); sin trabajador = ninguno trabaja
+  const minDate = format(new Date(), 'yyyy-MM-dd');
+  const maxDate = format(addDays(new Date(), 60), 'yyyy-MM-dd');
+  const [calMonth, setCalMonth] = useState(() => startOfMonth(parseISO(fecha)));
+  const cerrados = useDiasCerrados(calMonth, { min: minDate, max: maxDate });
+  const fechaCerrada = cerrados.has(fecha);
 
   // Fetch reservation data to get servicio (token-based lookup not available → ask user date)
   useEffect(() => {
@@ -101,6 +109,9 @@ export default function Reschedule() {
         },
       });
     } catch (err) {
+      // 400 de día cerrado (cierre creado mientras elegía): el mensaje del
+      // backend lo explica ("La barbería está cerrada…"); se libera el hueco
+      if (err?.response?.status === 400 || err?.response?.status === 409) setSelectedSlot(null);
       setError(err?.response?.data?.message || 'No se pudo reprogramar la cita.');
     } finally {
       setSubmitting(false);
@@ -118,16 +129,22 @@ export default function Reschedule() {
         label="Nueva fecha"
         value={fecha}
         onChange={handleDateChange}
-        min={format(new Date(), 'yyyy-MM-dd')}
-        max={format(addDays(new Date(), 60), 'yyyy-MM-dd')}
+        min={minDate}
+        max={maxDate}
+        closedDates={cerrados}
+        onMonthChange={setCalMonth}
         required
       />
 
       <div className="form-group">
         <label className="form-label">Horarios disponibles</label>
-        {loading && <Spinner size="sm" />}
+        {fechaCerrada ? (
+          <p className="closed-day-note" role="status">
+            Cerrado: ese día no se puede reservar. Elige otra fecha.
+          </p>
+        ) : loading && <Spinner size="sm" />}
         {error && <ErrorState message={error} onRetry={handleRetry} />}
-        {!loading && (
+        {!fechaCerrada && !loading && (
           <TimeSlotPicker slots={slots} selected={selectedSlot?.horaInicio} onSelect={setSelectedSlot} />
         )}
       </div>
@@ -136,7 +153,7 @@ export default function Reschedule() {
         <Button variant="ghost" onClick={() => navigate('/mis-citas')}>
           Cancelar
         </Button>
-        <Button variant="primary" disabled={!selectedSlot} loading={submitting} onClick={handleSubmit}>
+        <Button variant="primary" disabled={!selectedSlot || fechaCerrada} loading={submitting} onClick={handleSubmit}>
           Confirmar reprogramación
         </Button>
       </div>

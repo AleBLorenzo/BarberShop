@@ -39,12 +39,15 @@ const AdminServices = lazy(() => import('../pages/admin/Services'));
 const AdminReservations = lazy(() => import('../pages/admin/Reservations'));
 const AdminResenas = lazy(() => import('../pages/admin/Resenas'));
 const AdminResultados = lazy(() => import('../pages/admin/Resultados'));
+const AdminHorarios = lazy(() => import('../pages/admin/Horarios'));
+const AdminCierres = lazy(() => import('../pages/admin/Cierres'));
 
 const workerLinks = [
   { to: '/', label: 'Inicio' },
   { to: '/trabajador', label: 'Dashboard' },
   { to: '/trabajador/perfil', label: 'Perfil' },
-  { to: '/admin', label: 'Administración' },
+  // Solo ADMIN (el admin también usa "Mi panel"; cosmético, la API ya da 403, D10)
+  { to: '/admin', label: 'Administración', adminOnly: true },
 ];
 
 const adminLinks = [
@@ -55,6 +58,9 @@ const adminLinks = [
   { to: '/admin/resenas', label: 'Reseñas' },
   { to: '/admin/resultados', label: 'Resultados' },
   { to: '/admin/reservas', label: 'Reservas' },
+  { to: '/admin/horarios', label: 'Horarios' },
+  // Contador de clientes pendientes de avisar (D7)
+  { to: '/admin/cierres', label: 'Cierres y avisos', badge: 'avisos' },
   { to: '/trabajador', label: 'Mi panel' },
 ];
 
@@ -129,6 +135,8 @@ export default function AppRoutes() {
           <Route path="resenas" element={<AdminResenas />} />
           <Route path="resultados" element={<AdminResultados />} />
           <Route path="reservas" element={<AdminReservations />} />
+          <Route path="horarios" element={<AdminHorarios />} />
+          <Route path="cierres" element={<AdminCierres />} />
         </Route>
       </Routes>
     </ErrorBoundary>

@@ -1,6 +1,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useAvisosPendientes } from '../../hooks/useAvisosPendientes';
 import { mediaUrl } from '../../services/api';
 import Avatar from '../ui/Avatar';
 import Logo from '../ui/Logo';
@@ -9,10 +10,17 @@ import { LuMenu } from 'react-icons/lu';
 
 /**
  * Shared dashboard layout with sidebar for worker and admin.
- * @param {{brand?: string, links: Array<{to: string, label: string}>, roleLabel?: string}} props
+ * - `adminOnly`: el enlace solo se muestra a ADMIN (p. ej. "Administración"
+ *   en el menú del trabajador; cosmético, la API ya responde 403, D10).
+ * - `badge: 'avisos'`: muestra el nº de clientes pendientes de avisar (D7).
+ * @param {{brand?: string, links: Array<{to: string, label: string, adminOnly?: boolean, badge?: 'avisos'}>, roleLabel?: string}} props
  */
 export default function DashLayout({ brand, links, roleLabel }) {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
+  const visibleLinks = links.filter((link) => !link.adminOnly || isAdmin);
+  const avisosPendientes = useAvisosPendientes(
+    isAdmin && visibleLinks.some((link) => link.badge === 'avisos')
+  );
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
@@ -47,7 +55,7 @@ export default function DashLayout({ brand, links, roleLabel }) {
           {brand}
         </div>
         <nav className="sidebar-nav" aria-label="Navegación del panel">
-          {links.map((link) => (
+          {visibleLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
@@ -56,6 +64,14 @@ export default function DashLayout({ brand, links, roleLabel }) {
               onClick={() => setOpen(false)}
             >
               {link.label}
+              {link.badge === 'avisos' && avisosPendientes > 0 && (
+                <span
+                  className="sidebar-badge"
+                  aria-label={`${avisosPendientes} clientes por avisar`}
+                >
+                  {avisosPendientes}
+                </span>
+              )}
             </NavLink>
           ))}
           <button className="sidebar-link logout" onClick={handleLogout} style={{

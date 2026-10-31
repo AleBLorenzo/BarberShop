@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { addDays, format, parseISO, isToday, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { useWorkerReservas } from '../../hooks/useWorkerReservas';
@@ -12,14 +12,19 @@ import DatePicker from '../../components/ui/DatePicker';
 import TimeSlotPicker from '../../components/ui/TimeSlotPicker';
 import { Input, Select } from '../../components/ui/Input';
 import { EmptyState, ErrorState } from '../../components/ui/EmptyState';
-import { formatCurrency } from '../../utils/date';
+import { formatCurrency, formatTime } from '../../utils/date';
 import { useToast } from '../../hooks/useToast';
 import { LuChevronLeft, LuChevronRight, LuRefreshCw } from 'react-icons/lu';
 import { useSeo } from '../../components/Seo';
+import HorasLibres from '../../components/worker/HorasLibres';
+import { DIAS_SEMANA } from '../../utils/horario';
 
-// La barbería cierra los domingos: la semana se muestra de lunes a sábado
-const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const WEEK_DAYS = DAY_LABELS.length; // 6 (lun→sáb)
+// Semana lunes → domingo: qué días se trabaja (y por qué no) lo dice
+// GET /api/worker/agenda según el horario real, cierres y bloqueos (D12).
+const WEEK_DAYS = DIAS_SEMANA.length; // 7
+
+/** Etiqueta corta de un día sin jornada para la tarjeta de la semana. */
+const etiquetaSinJornada = (dia) => (dia?.cerradoBarberia ? 'Cerrado' : 'Libre');
 
 // Spanish phone: +34 prefix optional, 9 or 6/7 first digit, 9 digits total
 const PHONE_PATTERN = /^(?:\+34\s?)?[679]\d{2}[\s-]?\d{3}[\s-]?\d{3}$/;
@@ -71,6 +76,55 @@ export default function WorkerDashboard() {
   const [creating, setCreating] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [form, setForm] = useState(emptyForm);
+  // Agenda del día elegido en "Nueva cita": no se ofrecen huecos en días cerrados
+  const [diaNuevaCita, setDiaNuevaCita] = useState(null);
+
+  // --- Agenda efectiva de la semana visible (D2/D12) ---
+  const [weekStart, setWeekStart] = useState(() =>
+    startOfWeek(new Date(), { weekStartsOn: 1 })
+  );
+  const [agenda, setAgenda] = useState({});
+  // Día a seleccionar automáticamente cuando llegue la agenda de una semana:
+  // { monday: 'YYYY-MM-DD', preferido: 'YYYY-MM-DD' | null }. Al cargar (y con
+  // "Semana actual") se prefiere HOY; al navegar a otra semana, el primer día
+  // con jornada o, si no hay ninguno (o falla la agenda), el lunes. Se consume
+  // una sola vez: los recargos de agenda (Actualizar, horas libres) no cambian
+  // la selección del usuario, y una respuesta de otra semana no la pisa.
+  const autoSelectRef = useRef({
+    monday: format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+    preferido: format(new Date(), 'yyyy-MM-dd'),
+  });
+  const loadAgenda = useCallback(async (monday) => {
+    const mondayIso = format(monday, 'yyyy-MM-dd');
+    let porFecha = {};
+    try {
+      const dias = await workerApi.getAgenda(
+        mondayIso,
+        format(addDays(monday, WEEK_DAYS - 1), 'yyyy-MM-dd')
+      );
+      porFecha = Object.fromEntries(dias.map((d) => [d.fecha, d]));
+    } catch {
+      // Best-effort: sin agenda la semana se muestra completa, como antes
+    }
+    setAgenda(porFecha);
+
+    const pendiente = autoSelectRef.current;
+    if (pendiente?.monday !== mondayIso) return;
+    autoSelectRef.current = null;
+    const fechas = Array.from({ length: WEEK_DAYS }, (_, i) =>
+      format(addDays(monday, i), 'yyyy-MM-dd')
+    );
+    const elegido =
+      (pendiente.preferido && fechas.includes(pendiente.preferido) && pendiente.preferido) ||
+      fechas.find((f) => porFecha[f]?.trabaja) ||
+      mondayIso;
+    fetchDia(elegido);
+  }, [fetchDia]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- setState ocurre tras await (fetch), no sincrónicamente en el effect
+    loadAgenda(weekStart);
+  }, [weekStart, loadAgenda]);
 
   const clearError = (key) => {
     setFieldErrors((prev) => {
@@ -89,6 +143,13 @@ export default function WorkerDashboard() {
   const fetchSlots = async (servicioId, fecha, trabajadorId) => {
     setSlotsLoading(true);
     try {
+      // Día cerrado / libre: ni se consulta la disponibilidad ni se puede crear
+      const [dia] = await workerApi.getAgenda(fecha, fecha);
+      setDiaNuevaCita(dia || null);
+      if (dia && !dia.trabaja) {
+        setSlots([]);
+        return;
+      }
       const data = await publicApi.getDisponibilidad({ servicioId, fecha, trabajadorId });
       setSlots(data);
     } catch {
@@ -129,6 +190,7 @@ export default function WorkerDashboard() {
 
   const handleFechaChange = (fechaStr) => {
     setForm((prev) => ({ ...prev, fecha: fechaStr, slot: null }));
+    setDiaNuevaCita(null);
     clearError('fecha');
     clearError('slot');
   };
@@ -143,13 +205,16 @@ export default function WorkerDashboard() {
     setForm(emptyForm());
     setSlots([]);
     setFieldErrors({});
+    setDiaNuevaCita(null);
   };
 
   const handleCreateReserva = async () => {
     const errs = {};
     if (!form.servicioId) errs.servicioId = 'Selecciona un servicio';
     if (!form.fecha) errs.fecha = 'Selecciona una fecha';
-    if (!form.slot) errs.slot = 'Selecciona un horario';
+    if (diaNuevaCita && !diaNuevaCita.trabaja) {
+      errs.fecha = diaNuevaCita.descripcion || 'Ese día no hay jornada';
+    } else if (!form.slot) errs.slot = 'Selecciona un horario';
     if (!form.clienteNombre.trim()) errs.clienteNombre = 'Nombre requerido';
     const telefono = form.clienteTelefono.replace(/\s/g, '');
     if (!PHONE_PATTERN.test(telefono)) {
@@ -218,31 +283,44 @@ export default function WorkerDashboard() {
       efectivo: sumaPorMetodo('EFECTIVO'),
     };
   };
+  // Aislamiento (D10, tarea 9.3): `semana` y `reservasMes` vienen de
+  // /api/worker/reservas/semana, que filtra SIEMPRE por el trabajador del JWT
+  // (también el admin en "Mi panel"): estos importes son solo los propios.
   const ingresosSemana = resumenIngresos(semana);
   // Mes en curso: diario = reservas de hoy (00:00→ahora), mensual = todo el mes
   const hoyIso = format(new Date(), 'yyyy-MM-dd');
   const ingresosDia = resumenIngresos(reservasMes.filter((r) => r.fecha === hoyIso));
   const ingresosMes = resumenIngresos(reservasMes);
 
-  // Week being viewed: Monday of the selected week (defaults to current week)
-  const [weekStart, setWeekStart] = useState(() =>
-    startOfWeek(new Date(), { weekStartsOn: 1 })
-  );
-  // Week dates Mon-Sat (Sundays the shop is closed)
+  // Week being viewed: `weekStart` (lunes, arriba junto a la agenda)
+  // Week dates Mon-Sun (los días sin jornada se marcan con la agenda)
   const weekDates = Array.from({ length: WEEK_DAYS }, (_, i) => addDays(weekStart, i));
   const weekRangeLabel = `${format(weekDates[0], 'dd/MM')} – ${format(
     weekDates[weekDates.length - 1],
     'dd/MM/yyyy'
   )}`;
 
+  // El día seleccionado se fija cuando llega la agenda de la nueva semana
+  // (autoSelectRef + loadAgenda, que se dispara al cambiar weekStart).
   const goToWeek = (monday) => {
+    autoSelectRef.current = { monday: format(monday, 'yyyy-MM-dd'), preferido: null };
     setWeekStart(monday);
     fetchSemana(format(monday, 'yyyy-MM-dd'));
   };
   const handlePrevWeek = () => goToWeek(addDays(weekStart, -7));
   const handleNextWeek = () => goToWeek(addDays(weekStart, 7));
   const handleCurrentWeek = () => {
-    setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+    const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
+    autoSelectRef.current = {
+      monday: format(monday, 'yyyy-MM-dd'),
+      preferido: format(new Date(), 'yyyy-MM-dd'),
+    };
+    // Misma semana ya visible: el effect no se relanza, se recarga a mano
+    if (format(monday, 'yyyy-MM-dd') === format(weekStart, 'yyyy-MM-dd')) {
+      loadAgenda(monday);
+    } else {
+      setWeekStart(monday);
+    }
     // null → el backend devuelve la semana en curso
     fetchSemana(null);
   };
@@ -267,7 +345,7 @@ export default function WorkerDashboard() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await refresh();
+    await Promise.all([refresh(), loadAgenda(weekStart)]);
     setRefreshing(false);
     toast.info('Actualizado');
   };
@@ -336,17 +414,32 @@ export default function WorkerDashboard() {
           const iso = format(d, 'yyyy-MM-dd');
           const count = countsByDate[iso] || 0;
           const selected = fechaSeleccionada === iso;
+          const dia = agenda[iso];
+          const sinJornada = dia && !dia.trabaja;
+          // Día sin jornada y sin citas: desactivado (nada que ver ni gestionar)
+          const desactivado = sinJornada && count === 0;
           return (
             <button
               key={iso}
               type="button"
               role="listitem"
-              className={`day-card ${selected ? 'selected' : ''} ${isToday(d) ? 'today' : ''}`}
+              className={`day-card ${selected ? 'selected' : ''} ${isToday(d) ? 'today' : ''} ${sinJornada ? 'is-closed' : ''}`}
               onClick={() => fetchDia(iso)}
               aria-pressed={selected}
+              disabled={desactivado}
+              title={sinJornada ? dia.descripcion || undefined : undefined}
+              aria-label={
+                sinJornada
+                  ? `${DIAS_SEMANA[i].label} ${format(d, 'dd/MM')}: ${dia.descripcion || etiquetaSinJornada(dia)}`
+                  : undefined
+              }
             >
-              <div className="day-name">{DAY_LABELS[i]}</div>
-              <div className="day-count">{count}</div>
+              <div className="day-name">{DIAS_SEMANA[i].corto}</div>
+              {sinJornada && count === 0 ? (
+                <div className="day-closed">{etiquetaSinJornada(dia)}</div>
+              ) : (
+                <div className="day-count">{count}</div>
+              )}
               <div className="day-date">{format(d, 'dd/MM')}</div>
             </button>
           );
@@ -359,6 +452,19 @@ export default function WorkerDashboard() {
           <h2 style={{ fontSize: 'var(--font-size-lg)' }}>
             {format(parseISO(fechaSeleccionada), "EEEE dd 'de' MMMM", { locale: es })}
           </h2>
+          {agenda[fechaSeleccionada] && (
+            <p className="hint-text hint-text--flush">
+              {agenda[fechaSeleccionada].trabaja
+                ? `Jornada ${formatTime(agenda[fechaSeleccionada].inicio)} – ${formatTime(agenda[fechaSeleccionada].fin)}`
+                : agenda[fechaSeleccionada].descripcion || 'Sin jornada este día'}
+              {(agenda[fechaSeleccionada].bloqueos || []).map((b) => (
+                <span key={b.id}>
+                  {' · '}Libre {formatTime(b.horaInicio)}–{formatTime(b.horaFin)}
+                  {b.motivo ? ` (${b.motivo})` : ''}
+                </span>
+              ))}
+            </p>
+          )}
           {loadingDia ? (
             <Spinner size="md" />
           ) : reservasDia.length === 0 ? (
@@ -377,6 +483,9 @@ export default function WorkerDashboard() {
           message="Haz clic en un día de la semana para ver tus citas."
         />
       )}
+
+      {/* Mis horas libres (bloqueos propios, D5) */}
+      <HorasLibres onChange={() => loadAgenda(weekStart)} />
 
       {/* Weekly totals */}
       <section style={{ marginTop: 'var(--space-xl)' }}>
@@ -479,6 +588,10 @@ export default function WorkerDashboard() {
           </label>
           {!form.servicioId ? (
             <p style={{ color: 'var(--muted)' }}>Elige un servicio para ver los huecos disponibles.</p>
+          ) : diaNuevaCita && !diaNuevaCita.trabaja && !slotsLoading ? (
+            <p className="form-error" role="alert">
+              {diaNuevaCita.descripcion || 'Ese día no hay jornada'}: elige otra fecha.
+            </p>
           ) : slotsLoading ? (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <Spinner size="sm" /> Consultando disponibilidad...

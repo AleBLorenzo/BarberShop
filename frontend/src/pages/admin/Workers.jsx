@@ -88,7 +88,7 @@ export default function AdminWorkers() {
   const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const openCreate = () => {
-    reset({ nombre: '', email: '', password: '', activo: true, foto: '', descripcion: '' });
+    reset({ nombre: '', email: '', password: '', activo: true, reservable: true, foto: '', descripcion: '' });
     setModal({ mode: 'create' });
   };
 
@@ -98,6 +98,7 @@ export default function AdminWorkers() {
       email: trab.email,
       password: '',
       activo: trab.activo,
+      reservable: trab.reservable !== false,
       foto: trab.foto || '',
       descripcion: trab.descripcion || '',
     });
@@ -131,7 +132,7 @@ export default function AdminWorkers() {
     setSubmitting(true);
     try {
       if (modal.mode === 'create') {
-        await adminApi.createTrabajador({
+        const creado = await adminApi.createTrabajador({
           nombre: values.nombre,
           email: values.email,
           password: values.password,
@@ -140,6 +141,11 @@ export default function AdminWorkers() {
           // vacío → null (no se almacena string vacío)
           descripcion: values.descripcion?.trim() || null,
         });
+        // El alta no acepta `reservable` (por defecto true): si se desmarcó,
+        // se aplica con un update inmediato
+        if (values.reservable === false && creado?.id) {
+          await adminApi.toggleTrabajadorReservable({ ...creado, reservable: true });
+        }
         toast.success('Trabajador creado');
       } else {
         await adminApi.updateTrabajador(modal.data.id, {
@@ -147,6 +153,7 @@ export default function AdminWorkers() {
           nombre: values.nombre,
           email: values.email,
           activo: !!values.activo,
+          reservable: !!values.reservable,
           foto: values.foto || '',
           descripcion: values.descripcion?.trim() || null,
         });
@@ -170,6 +177,19 @@ export default function AdminWorkers() {
       toast.success(trab.activo ? 'Desactivado' : 'Activado');
     } catch {
       toast.error('No se pudo cambiar el estado');
+    }
+  };
+
+  const toggleReservable = async (trab) => {
+    try {
+      await adminApi.toggleTrabajadorReservable(trab);
+      const ahora = trab.reservable === false;
+      setTrabajadores((prev) =>
+        prev.map((t) => (t.id === trab.id ? { ...t, reservable: ahora } : t))
+      );
+      toast.success(ahora ? 'Ahora aparece en la web' : 'Ya no aparece en la web');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'No se pudo cambiar');
     }
   };
 
@@ -217,6 +237,21 @@ export default function AdminWorkers() {
         <Badge variant={row.activo ? 'confirmed' : 'cancelled'}>
           {row.activo ? 'Activo' : 'Inactivo'}
         </Badge>
+      ),
+    },
+    {
+      key: 'reservable',
+      label: 'Reservable (web)',
+      render: (row) => (
+        <label className="form-check">
+          <input
+            type="checkbox"
+            checked={row.reservable !== false}
+            onChange={() => toggleReservable(row)}
+            aria-label={`${row.nombre}: reservable en la web`}
+          />
+          {row.reservable !== false ? 'Sí' : 'No'}
+        </label>
       ),
     },
     {
@@ -376,6 +411,10 @@ export default function AdminWorkers() {
           <div className="form-group" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input type="checkbox" id="activo" {...register('activo')} />
             <label htmlFor="activo">Activo</label>
+          </div>
+          <div className="form-group form-check">
+            <input type="checkbox" id="reservable" {...register('reservable')} />
+            <label htmlFor="reservable">Reservable (aparece en la web)</label>
           </div>
         </form>
       </Modal>

@@ -2,7 +2,9 @@
  * Fuente única de datos de negocio (todo lo visible por el cliente).
  *
  * KEEP IN SYNC con:
- *  - backend/src/main/resources/application.properties  (app.business.*)
+ *  - backend/src/main/resources/application.properties  (app.business.*: el
+ *    horario ya NO es fijo; esas propiedades solo siembran el horario general
+ *    la primera vez — el real vive en BD y lo edita el admin, ver HORARIO_TEXTO)
  *  - backend/src/main/java/.../service/EmailService.java (asuntos/cuerpos de correo)
  *  - README.md
  *
@@ -55,7 +57,14 @@ export const GOOGLE_MAPS_EMBED_URL =
 /** Perfil público de Instagram del negocio (URL limpia, sin parámetros de seguimiento). */
 export const INSTAGRAM_URL = 'https://www.instagram.com/the_tank_barber';
 
-/** Horario textual (lun–sáb, domingos cerrado). */
+/**
+ * Horario textual de RESPALDO (lun–sáb, domingos cerrado). La portada pinta el
+ * horario real de `GET /api/public/horario` (editable por el admin en
+ * /admin/horarios, cambio admin-agenda-y-cierres) y solo usa este texto si la
+ * API falla. KEEP IN SYNC con la siembra del horario general
+ * (`app.business.opening-hour/closing-hour/closed-days` en application.properties,
+ * `HorarioDefaultsInitializer`) y con el texto de pages/legal/Terminos.jsx.
+ */
 export const HORARIO_TEXTO = 'Lunes a sábado · 9:00 – 20:00 · Domingos cerrado';
 
 export default {

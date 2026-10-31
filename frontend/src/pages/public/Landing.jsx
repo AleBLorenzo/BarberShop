@@ -9,6 +9,7 @@ import Avatar from '../../components/ui/Avatar';
 import ContactMap from '../../components/ContactMap';
 import { LuStar, LuMapPin, LuPhone, LuMail, LuClock, LuScissors, LuSparkles, LuBrush, LuArrowRight, LuInstagram } from 'react-icons/lu';
 import { useSeo } from '../../components/Seo';
+import { resumirHorario } from '../../utils/horario';
 
 /** Términos del marquee de servicios bajo el hero (decorativo). */
 const MARQUEE_ITEMS = [
@@ -92,6 +93,8 @@ export default function Landing() {
   const [trabajadores, setTrabajadores] = useState([]);
   const [resenas, setResenas] = useState([]);
   const [resultados, setResultados] = useState([]);
+  // Horario real (GET /api/public/horario, D12); HORARIO_TEXTO como respaldo
+  const [horarioLineas, setHorarioLineas] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -131,11 +134,22 @@ export default function Landing() {
     }
   };
 
+  // El horario tampoco bloquea: si falla o viene vacío se pinta HORARIO_TEXTO.
+  const loadHorario = async () => {
+    try {
+      const dias = await publicApi.getHorario();
+      setHorarioLineas(dias.length > 0 ? resumirHorario(dias) : null);
+    } catch {
+      setHorarioLineas(null);
+    }
+  };
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- setState ocurre tras await (fetch), no sincrónicamente en el effect
     load();
     loadResenas();
     loadResultados();
+    loadHorario();
   }, []);
 
   // Escanea los reveal tras cargar datos (las tarjetas llegan después del fetch)
@@ -386,7 +400,14 @@ export default function Landing() {
         )}
         <p>
           <LuClock aria-hidden="true" style={{ marginRight: 6 }} />
-          {HORARIO_TEXTO}
+          {horarioLineas
+            ? horarioLineas.map((linea, i) => (
+              <span key={linea}>
+                {i > 0 && <br />}
+                {linea}
+              </span>
+            ))
+            : HORARIO_TEXTO}
         </p>
         {/* Mapa embebido (fachada clic-para-cargar); el enlace externo de la
             dirección se conserva arriba como vía para las indicaciones. */}

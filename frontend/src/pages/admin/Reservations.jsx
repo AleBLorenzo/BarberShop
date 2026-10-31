@@ -10,9 +10,22 @@ import { Input, Select, Label } from '../../components/ui/Input';
 import DatePicker from '../../components/ui/DatePicker';
 import { useToast } from '../../hooks/useToast';
 import { useSeo } from '../../components/Seo';
+import CancelarReservaModal from '../../components/admin/CancelarReservaModal';
 
 const PAGE_SIZE = 20;
 const ESTADOS = ['PENDIENTE', 'CONFIRMADA', 'COMPLETADA', 'CANCELADA', 'NO_ASISTIO'];
+const esActiva = (estado) => estado === 'PENDIENTE' || estado === 'CONFIRMADA';
+
+/** Datos que muestra el modal "Cancelar y avisar" a partir de una ReservaDTO. */
+const toCita = (r) => ({
+  id: r.id,
+  fecha: r.fecha,
+  horaInicio: r.horaInicio,
+  clienteNombre: r.cliente?.nombre,
+  clienteTelefono: r.cliente?.telefono,
+  servicioNombre: r.servicio?.nombre,
+  trabajadorNombre: r.trabajador?.nombre,
+});
 
 /**
  * Admin global reservations page with filters, status override and edit.
@@ -37,6 +50,9 @@ export default function AdminReservations() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ trabajadorId: '', fecha: '', horaInicio: '', estado: '' });
   const [saving, setSaving] = useState(false);
+
+  // "Cancelar y avisar" (D6): toda cancelación del admin pasa por aquí con motivo
+  const [cancelando, setCancelando] = useState(null);
 
   const load = async () => {
     try {
@@ -84,6 +100,11 @@ export default function AdminReservations() {
   };
 
   const quickStatus = async (r, estado) => {
+    // Cancelar una cita activa abre el modal de motivo + aviso al cliente
+    if (estado === 'CANCELADA' && esActiva(r.estado)) {
+      setCancelando(toCita(r));
+      return;
+    }
     try {
       await adminApi.updateReserva(r.id, { estado });
       setReservas((prev) => prev.map((x) => (x.id === r.id ? { ...x, estado } : x)));
@@ -94,6 +115,12 @@ export default function AdminReservations() {
   };
 
   const saveEdit = async () => {
+    if (form.estado === 'CANCELADA' && esActiva(editing?.estado)) {
+      const cita = toCita(editing);
+      setEditing(null);
+      setCancelando(cita);
+      return;
+    }
     setSaving(true);
     try {
       const payload = { estado: form.estado };
@@ -149,12 +176,36 @@ export default function AdminReservations() {
       ),
     },
     {
+      key: 'cancelacion',
+      label: 'Cancelación',
+      render: (row) =>
+        row.estado === 'CANCELADA' ? (
+          <span className="cancelacion-info">
+            {row.canceladaPor === 'ADMIN'
+              ? 'Por la barbería'
+              : row.canceladaPor === 'CLIENTE'
+                ? 'Por el cliente'
+                : 'Cancelada'}
+            {row.motivoCancelacion && <small>{row.motivoCancelacion}</small>}
+          </span>
+        ) : (
+          <span className="cell-empty">—</span>
+        ),
+    },
+    {
       key: 'actions',
       label: 'Acciones',
       render: (row) => (
-        <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
-          Editar
-        </Button>
+        <span className="row-actions">
+          <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
+            Editar
+          </Button>
+          {esActiva(row.estado) && (
+            <Button size="sm" variant="danger" onClick={() => setCancelando(toCita(row))}>
+              Cancelar y avisar
+            </Button>
+          )}
+        </span>
       ),
     },
   ];
@@ -195,6 +246,29 @@ export default function AdminReservations() {
         page={page}
         totalPages={totalPages}
         onPageChange={setPage}
+      />
+
+      <CancelarReservaModal
+        key={cancelando?.id ?? 'none'}
+        cita={cancelando}
+        onClose={() => setCancelando(null)}
+        onCancelada={(reserva) => {
+          const id = cancelando.id;
+          setReservas((prev) =>
+            prev.map((x) =>
+              x.id === id
+                ? {
+                  ...x,
+                  estado: 'CANCELADA',
+                  canceladaPor: reserva?.canceladaPor ?? 'ADMIN',
+                  motivoCancelacion: reserva?.motivoCancelacion ?? null,
+                }
+                : x
+            )
+          );
+          setCancelando(null);
+          toast.success('Cita cancelada y cliente avisado');
+        }}
       />
 
       {/* Edit modal */}

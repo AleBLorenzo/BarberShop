@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { publicApi } from '../../services/api';
 import { formatDate, formatTime } from '../../utils/date';
@@ -86,6 +86,9 @@ export default function MyAppointments() {
   };
 
   const isCancellable = (estado) => estado === 'PENDIENTE' || estado === 'CONFIRMADA';
+  // Cancelada por el negocio (cierre de día o cancelación del admin, D6)
+  const porBarberia = (r) => r.estado === 'CANCELADA' && r.canceladaPor === 'ADMIN';
+  const etiquetaEstado = (r) => (porBarberia(r) ? 'Cancelada por la barbería' : estadoToLabel(r.estado));
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
@@ -138,7 +141,10 @@ export default function MyAppointments() {
                   {r.trabajador?.nombre || 'Cualquiera'} · {r.cliente?.nombre}
                 </div>
               </div>
-              <Badge variant={estadoToVariant(r.estado)}>{estadoToLabel(r.estado)}</Badge>
+              <Badge variant={estadoToVariant(r.estado)}>{etiquetaEstado(r)}</Badge>
+              {porBarberia(r) && r.motivoCancelacion && (
+                <div className="res-cancel-note">Motivo: {r.motivoCancelacion}</div>
+              )}
             </div>
           ))}
         </div>
@@ -153,6 +159,11 @@ export default function MyAppointments() {
           selected && (
             <>
               <Button variant="ghost" onClick={() => setSelected(null)}>Cerrar</Button>
+              {porBarberia(selected) && (
+                <Link to="/reservar/servicio" className="btn btn-primary btn-md">
+                  Reservar otra cita
+                </Link>
+              )}
               {isCancellable(selected.estado) && (
                 <Button variant="danger" onClick={() => setConfirmCancel(selected)}>
                   Cancelar cita
@@ -193,9 +204,17 @@ export default function MyAppointments() {
             <div className="summary-row">
               <span className="label">Estado</span>
               <span className="value">
-                <Badge variant={estadoToVariant(selected.estado)}>{estadoToLabel(selected.estado)}</Badge>
+                <Badge variant={estadoToVariant(selected.estado)}>{etiquetaEstado(selected)}</Badge>
               </span>
             </div>
+            {porBarberia(selected) && (
+              <div className="summary-row">
+                <span className="label">Motivo</span>
+                <span className="value">
+                  {selected.motivoCancelacion || 'La barbería ha tenido que cancelar la cita.'}
+                </span>
+              </div>
+            )}
             <div className="summary-row">
               <span className="label">Token</span>
               <span className="value" style={{ fontSize: 'var(--font-size-xs)', wordBreak: 'break-all' }}>

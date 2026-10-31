@@ -104,6 +104,12 @@ export default function BookingConfirm() {
     } catch (err) {
       const status = err?.response?.status;
       const msg = err?.response?.data?.message || err?.message || '';
+      // 400 de día cerrado / sin jornada (p. ej. se cerró el día mientras
+      // reservaba): volver al paso 3 con el motivo del backend
+      if (status === 400 && /cerrad|no trabaja|no está disponible|jornada|debe terminar/i.test(msg)) {
+        navigate('/reservar/fecha-hora', { state: { error: msg } });
+        return;
+      }
       if (status === 409 || /disponible|no longer|SlotNotAvailable/i.test(msg)) {
         // Race condition: slot taken → return to step 3 with error
         navigate('/reservar/fecha-hora', {

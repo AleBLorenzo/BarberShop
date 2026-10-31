@@ -88,6 +88,7 @@ export function mediaUrl(path) {
  * @property {string} nombre
  * @property {string} [email]
  * @property {boolean} activo
+ * @property {boolean} [reservable] aparece en la reserva pública
  * @property {string} [foto] ruta pública de la foto (`/uploads/trabajadores/...`)
  *
  * @typedef {Object} DisponibilidadSlot
@@ -109,6 +110,8 @@ export function mediaUrl(path) {
  * @property {string} estado
  * @property {string|null} [metodoPago] VISA|EFECTIVO|null (solo COMPLETADA)
  * @property {string} tokenCancelacion
+ * @property {string|null} [motivoCancelacion]
+ * @property {string|null} [canceladaPor] CLIENTE|ADMIN (solo si CANCELADA)
  * @property {string} createdAt
  * @property {number} precioTotal
  * @property {number} duracionMinutos
@@ -128,6 +131,89 @@ export function mediaUrl(path) {
  * @property {string} nombre
  * @property {number} precio
  * @property {number} duracionMinutos
+ *
+ * @typedef {Object} HorarioDia
+ * @property {string} diaSemana MONDAY…SUNDAY
+ * @property {boolean} abierto en el horario de un trabajador: trabaja ese día
+ * @property {string|null} horaInicio "HH:mm:ss"
+ * @property {string|null} horaFin "HH:mm:ss"
+ *
+ * @typedef {Object} ReservaConflicto
+ * @property {number} reservaId
+ * @property {string} fecha
+ * @property {string} horaInicio
+ * @property {string} horaFin
+ * @property {string} estado
+ * @property {string} clienteNombre
+ * @property {string} clienteTelefono
+ * @property {boolean} clienteTieneEmail
+ * @property {number} trabajadorId
+ * @property {string} trabajadorNombre
+ * @property {string} servicioNombre
+ * @property {string} [tipo] DIA_CERRADO|FUERA_DE_JORNADA|SOBRE_BLOQUEO|CIERRE|SOLAPA_BLOQUEO
+ * @property {string} [motivo]
+ *
+ * @typedef {Object} HorarioGuardado
+ * @property {HorarioDia[]} dias
+ * @property {ReservaConflicto[]} conflictos
+ * @property {string[]} [avisos]
+ *
+ * @typedef {Object} Cierre
+ * @property {number} id
+ * @property {string} fecha
+ * @property {boolean} general
+ * @property {number|null} trabajadorId
+ * @property {string|null} trabajadorNombre
+ * @property {string|null} motivo
+ * @property {string} [creadoPorNombre]
+ *
+ * @typedef {Object} AvisoCancelacion
+ * @property {number} id
+ * @property {number} reservaId
+ * @property {string} clienteNombre
+ * @property {string} clienteTelefono
+ * @property {string|null} clienteEmail
+ * @property {string} fecha
+ * @property {string} horaInicio
+ * @property {string} horaFin
+ * @property {string} servicioNombre
+ * @property {string} trabajadorNombre
+ * @property {string|null} motivo
+ * @property {string} canal EMAIL|TELEFONO
+ * @property {string} estado PENDIENTE_ENVIO|ENVIADO|FALLIDO|PENDIENTE|AVISADO
+ * @property {string|null} [error]
+ *
+ * @typedef {Object} Bloqueo
+ * @property {number} id
+ * @property {number} trabajadorId
+ * @property {string} trabajadorNombre
+ * @property {string} fecha
+ * @property {string} horaInicio
+ * @property {string} horaFin
+ * @property {string|null} motivo
+ *
+ * @typedef {Object} DiaAgenda
+ * @property {string} fecha
+ * @property {boolean} trabaja
+ * @property {string|null} inicio
+ * @property {string|null} fin
+ * @property {string|null} causa TRABAJADOR_INACTIVO|CIERRE_GENERAL|BARBERIA_CERRADA|CIERRE_TRABAJADOR|DIA_LIBRE
+ * @property {boolean} cerradoBarberia
+ * @property {string|null} motivoCierre
+ * @property {string|null} descripcion texto legible de por qué no hay jornada
+ * @property {Bloqueo[]} bloqueos
+ *
+ * @typedef {Object} IngresoTrabajador
+ * @property {number|null} trabajadorId
+ * @property {string} nombre
+ * @property {string} [rol]
+ * @property {boolean} [activo]
+ * @property {number} total
+ * @property {number} visa
+ * @property {number} efectivo
+ * @property {number} sinMetodo
+ * @property {number} completadas
+ * @property {number} confirmadas
  *
  * @typedef {Object} ApiResponse
  * @property {any} data
@@ -292,6 +378,13 @@ function unwrap(response) {
   return body;
 }
 
+/** Evento de ventana que avisa de que el nº de avisos pendientes puede haber cambiado. */
+export const AVISOS_CAMBIADOS_EVENT = 'avisos:cambiados';
+
+function notificarAvisosCambiados() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(AVISOS_CAMBIADOS_EVENT));
+}
+
 // ============================================================
 // API METHODS
 // ============================================================
@@ -441,11 +534,37 @@ export const publicApi = {
     const res = await api.post('/public/reservas/reprogramar', payload);
     return unwrap(res);
   },
+
+  /**
+   * Horario general real de la barbería (portada). Horas "HH:mm:ss".
+   * @returns {Promise<HorarioDia[]>}
+   */
+  async getHorario() {
+    const res = await api.get('/public/horario');
+    const data = unwrap(res);
+    return Array.isArray(data) ? data : [];
+  },
+
+  /**
+   * Fechas sin jornada en [desde, hasta] (máx. 62 días): del trabajador
+   * indicado o, sin él, aquellas en las que no trabaja ningún reservable.
+   * @param {string} desde ISO YYYY-MM-DD
+   * @param {string} hasta ISO YYYY-MM-DD (inclusive)
+   * @param {number} [trabajadorId]
+   * @returns {Promise<string[]>} fechas ISO cerradas
+   */
+  async getDiasCerrados(desde, hasta, trabajadorId) {
+    const params = { desde, hasta };
+    if (trabajadorId) params.trabajadorId = trabajadorId;
+    const res = await api.get('/public/dias-cerrados', { params });
+    const data = unwrap(res);
+    return Array.isArray(data) ? data : [];
+  },
 };
 
 export const workerApi = {
   /**
-   * Reservas de la semana (lun→sáb). Sin `fechaInicio` el backend devuelve la
+   * Reservas de la semana (lun→dom). Sin `fechaInicio` el backend devuelve la
    * semana en curso; con `fechaInicio` (lunes deseado, `YYYY-MM-DD`) devuelve
    * esa semana.
    * @param {string} [fechaInicio] ISO date YYYY-MM-DD del lunes de la semana
@@ -536,6 +655,51 @@ export const workerApi = {
     const res = await api.get('/worker/dashboard', { params });
     return unwrap(res);
   },
+
+  /**
+   * Agenda efectiva propia (jornada, cierres con motivo y bloqueos) por día.
+   * Sin parámetros: semana actual lunes → domingo. Máx. 62 días.
+   * @param {string} [desde] ISO YYYY-MM-DD
+   * @param {string} [hasta] ISO YYYY-MM-DD (inclusive)
+   * @returns {Promise<DiaAgenda[]>}
+   */
+  async getAgenda(desde, hasta) {
+    const params = {};
+    if (desde) params.desde = desde;
+    if (hasta) params.hasta = hasta;
+    const res = await api.get('/worker/agenda', { params });
+    const data = unwrap(res);
+    return Array.isArray(data) ? data : [];
+  },
+
+  /**
+   * Bloqueos (horas libres) propios en [desde, hasta]; por defecto hoy → +60 días.
+   * @returns {Promise<Bloqueo[]>}
+   */
+  async getBloqueos(desde, hasta) {
+    const params = {};
+    if (desde) params.desde = desde;
+    if (hasta) params.hasta = hasta;
+    const res = await api.get('/worker/bloqueos', { params });
+    const data = unwrap(res);
+    return Array.isArray(data) ? data : [];
+  },
+
+  /**
+   * Bloquea una franja propia. 409 `BLOQUEO_CONFLICTO` con
+   * `response.data.data = {citas, bloqueos}` si pisa citas activas u otro bloqueo.
+   * @param {{fecha: string, horaInicio: string, horaFin: string, motivo?: string}} payload
+   * @returns {Promise<Bloqueo>}
+   */
+  async crearBloqueo(payload) {
+    const res = await api.post('/worker/bloqueos', payload);
+    return unwrap(res);
+  },
+
+  /** @param {number} id bloqueo propio (uno ajeno responde 404) */
+  async eliminarBloqueo(id) {
+    await api.delete(`/worker/bloqueos/${id}`);
+  },
 };
 
 export const adminApi = {
@@ -603,6 +767,20 @@ export const adminApi = {
     return unwrap(res);
   },
 
+  /** Alterna `reservable` (aparece en la reserva pública, D8) con el DTO completo. */
+  async toggleTrabajadorReservable(trabajador) {
+    const res = await api.put(`/admin/trabajadores/${trabajador.id}`, {
+      id: trabajador.id,
+      nombre: trabajador.nombre,
+      email: trabajador.email,
+      activo: trabajador.activo,
+      reservable: trabajador.reservable === false,
+      foto: trabajador.foto || '',
+      descripcion: trabajador.descripcion ?? null,
+    });
+    return unwrap(res);
+  },
+
   /** Services CRUD (backend returns the full list) */
   async getServicios() {
     const res = await api.get('/admin/servicios');
@@ -639,6 +817,8 @@ export const adminApi = {
 
   async updateReserva(id, payload) {
     const res = await api.put(`/admin/reservas/${id}`, payload);
+    // Pasar a CANCELADA por aquí también crea un aviso al cliente (D6)
+    if (payload?.estado === 'CANCELADA') notificarAvisosCambiados();
     return unwrap(res);
   },
 
@@ -744,6 +924,159 @@ export const adminApi = {
     await api.delete(
       `/admin/media/${encodeURIComponent(carpeta)}/${encodeURIComponent(nombre)}`
     );
+  },
+
+  // ---------- Horarios (D1, D11) ----------
+
+  /** @returns {Promise<HorarioDia[]>} los 7 días del horario general */
+  async getHorario() {
+    const res = await api.get('/admin/horario');
+    const data = unwrap(res);
+    return Array.isArray(data) ? data : [];
+  },
+
+  /**
+   * Reemplaza los 7 días del horario general. Las citas que queden fuera NO
+   * se cancelan: vuelven en `conflictos`.
+   * @param {HorarioDia[]} dias
+   * @returns {Promise<HorarioGuardado>}
+   */
+  async saveHorario(dias) {
+    const res = await api.put('/admin/horario', dias);
+    return unwrap(res);
+  },
+
+  /** @returns {Promise<HorarioDia[]>} solo los días con horario propio (el resto hereda) */
+  async getHorarioTrabajador(id) {
+    const res = await api.get(`/admin/trabajadores/${id}/horario`);
+    const data = unwrap(res);
+    return Array.isArray(data) ? data : [];
+  },
+
+  /**
+   * Reemplaza el horario propio del trabajador: los días ausentes heredan el general.
+   * @param {number} id
+   * @param {HorarioDia[]} dias
+   * @returns {Promise<HorarioGuardado>}
+   */
+  async saveHorarioTrabajador(id, dias) {
+    const res = await api.put(`/admin/trabajadores/${id}/horario`, dias);
+    return unwrap(res);
+  },
+
+  /**
+   * Citas activas futuras en conflicto con la agenda (por defecto hoy → +60 días).
+   * @returns {Promise<ReservaConflicto[]>}
+   */
+  async getConflictos(desde, hasta) {
+    const params = {};
+    if (desde) params.desde = desde;
+    if (hasta) params.hasta = hasta;
+    const res = await api.get('/admin/agenda/conflictos', { params });
+    const data = unwrap(res);
+    return Array.isArray(data) ? data : [];
+  },
+
+  // ---------- Cierres de día (D4) ----------
+
+  /** @returns {Promise<Cierre[]>} cierres en [desde, hasta] (por defecto hoy → +60 días) */
+  async getCierres(desde, hasta) {
+    const params = {};
+    if (desde) params.desde = desde;
+    if (hasta) params.hasta = hasta;
+    const res = await api.get('/admin/cierres', { params });
+    const data = unwrap(res);
+    return Array.isArray(data) ? data : [];
+  },
+
+  /**
+   * Vista previa de un cierre (no modifica nada). Sin `trabajadorId` = toda la barbería.
+   * @returns {Promise<{fecha: string, general: boolean, trabajadorNombre?: string, yaExiste: boolean, total: number, porEmail: number, porTelefono: number, citas: ReservaConflicto[]}>}
+   */
+  async previewCierre(fecha, trabajadorId) {
+    const params = { fecha };
+    if (trabajadorId) params.trabajadorId = trabajadorId;
+    const res = await api.get('/admin/cierres/preview', { params });
+    return unwrap(res);
+  },
+
+  /**
+   * Crea el cierre y cancela (con aviso) las citas afectadas. 409
+   * `CIERRE_DUPLICADO` si ya existe.
+   * @param {{fecha: string, trabajadorId?: number|null, motivo?: string|null}} payload
+   * @returns {Promise<{cierre: Cierre, canceladas: number, porEmail: number, porTelefono: number, avisos: AvisoCancelacion[]}>}
+   */
+  async crearCierre(payload) {
+    const res = await api.post('/admin/cierres', payload);
+    notificarAvisosCambiados();
+    return unwrap(res);
+  },
+
+  /** Reabre el día (las citas canceladas NO se reactivan). */
+  async eliminarCierre(id) {
+    await api.delete(`/admin/cierres/${id}`);
+  },
+
+  // ---------- Cancelación por el negocio y avisos (D6, D7) ----------
+
+  /**
+   * Cancela una cita activa con motivo opcional y aviso al cliente.
+   * @param {number} id
+   * @param {string} [motivo]
+   * @returns {Promise<Reserva>}
+   */
+  async cancelarReserva(id, motivo) {
+    const res = await api.post(`/admin/reservas/${id}/cancelar`, { motivo: motivo?.trim() || null });
+    notificarAvisosCambiados();
+    return unwrap(res);
+  },
+
+  /** @returns {Promise<AvisoCancelacion[]>} por defecto solo los que requieren aviso manual */
+  async getAvisosPendientes() {
+    const res = await api.get('/admin/avisos', { params: { pendientes: true } });
+    const data = unwrap(res);
+    return Array.isArray(data) ? data : [];
+  },
+
+  /** @returns {Promise<number>} nº de avisos pendientes de acción */
+  async contarAvisos() {
+    const res = await api.get('/admin/avisos/pendientes/count');
+    const n = Number(unwrap(res));
+    return Number.isFinite(n) ? n : 0;
+  },
+
+  /** @returns {Promise<AvisoCancelacion>} */
+  async marcarAvisado(id) {
+    const res = await api.put(`/admin/avisos/${id}/avisado`);
+    notificarAvisosCambiados();
+    return unwrap(res);
+  },
+
+  // ---------- Ingresos y bloqueos ----------
+
+  /**
+   * Ingresos por trabajador (total = completadas + confirmadas; desglose solo
+   * completadas) y totales del rango.
+   * @returns {Promise<{inicio: string, fin: string, filas: IngresoTrabajador[], totales: IngresoTrabajador}>}
+   */
+  async getIngresos(inicio, fin) {
+    const res = await api.get('/admin/ingresos', { params: { inicio, fin } });
+    return unwrap(res);
+  },
+
+  /** @returns {Promise<Bloqueo[]>} bloqueos (de un trabajador o de todos) en el rango */
+  async getBloqueos({ trabajadorId, desde, hasta } = {}) {
+    const params = {};
+    if (trabajadorId) params.trabajadorId = trabajadorId;
+    if (desde) params.desde = desde;
+    if (hasta) params.hasta = hasta;
+    const res = await api.get('/admin/bloqueos', { params });
+    const data = unwrap(res);
+    return Array.isArray(data) ? data : [];
+  },
+
+  async eliminarBloqueo(id) {
+    await api.delete(`/admin/bloqueos/${id}`);
   },
 };
 

@@ -15,9 +15,13 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
  * Calendario visual inline para elegir la fecha de una cita.
  * Sustituye al input nativo con un mes navegable, días deshabilitados
  * fuera de rango, marcador de hoy y navegación por teclado (flechas).
- * @param {{label?: string, value?: string|null, onChange: Function, min?: string, max?: string, error?: string}} props
+ * Opcional (admin-agenda-y-cierres, D12): `closedDates` (Set/array de fechas
+ * ISO) marca los días sin jornada como "Cerrado" y no seleccionables;
+ * `onMonthChange(primerDiaDelMes: Date)` avisa al cambiar el mes visible
+ * (para pedir los días cerrados de ese mes).
+ * @param {{label?: string, value?: string|null, onChange: Function, min?: string, max?: string, error?: string, closedDates?: Set<string>|string[], onMonthChange?: Function}} props
  */
-export default function CalendarPicker({ label, value, onChange, min, max, error, required }) {
+export default function CalendarPicker({ label, value, onChange, min, max, error, required, closedDates, onMonthChange }) {
   const parse = (v) => (v instanceof Date ? v : v ? parseISO(v) : null);
   const minD = min ? parse(min) : null;
   const maxD = max ? parse(max) : null;
@@ -36,7 +40,9 @@ export default function CalendarPicker({ label, value, onChange, min, max, error
   const inRange = (d) =>
     (!minD || !isBefore(d, minD)) && (!maxD || !isAfter(d, maxD));
 
-  const disabled = cells.map((d) => !isSameMonth(d, month) || !inRange(d));
+  const closedSet = closedDates instanceof Set ? closedDates : new Set(closedDates || []);
+  const isClosed = (d) => closedSet.has(format(d, 'yyyy-MM-dd'));
+  const disabled = cells.map((d) => !isSameMonth(d, month) || !inRange(d) || isClosed(d));
 
   const canGoPrev = minD ? isAfter(month, startOfMonth(minD)) : true;
   const canGoNext = maxD ? isBefore(month, startOfMonth(maxD)) : true;
@@ -54,8 +60,10 @@ export default function CalendarPicker({ label, value, onChange, min, max, error
     : defaultIdx;
 
   const goMonth = (delta) => {
-    setMonth((m) => addMonths(m, delta));
+    const next = addMonths(month, delta);
+    setMonth(next);
     setFocusIdx(-1);
+    onMonthChange?.(next);
   };
 
   /** Busca la primera celda habilitada desde `from` en la dirección `dir`. */
@@ -130,6 +138,7 @@ export default function CalendarPicker({ label, value, onChange, min, max, error
             const outside = !isSameMonth(d, month);
             const isSel = Boolean(selected && isSameDay(d, selected));
             const isToday = isSameDay(d, new Date());
+            const closed = !outside && inRange(d) && isClosed(d);
             return (
               <button
                 key={i}
@@ -137,13 +146,14 @@ export default function CalendarPicker({ label, value, onChange, min, max, error
                 type="button"
                 className={
                   `calendar-day${outside ? ' is-outside' : ''}` +
-                  `${isSel ? ' is-selected' : ''}${isToday ? ' is-today' : ''}`
+                  `${isSel ? ' is-selected' : ''}${isToday ? ' is-today' : ''}${closed ? ' is-closed' : ''}`
                 }
                 tabIndex={i === rovingIdx ? 0 : -1}
                 disabled={disabled[i]}
                 aria-pressed={isSel || undefined}
                 aria-current={isToday ? 'date' : undefined}
-                aria-label={`${cap(format(d, "EEEE d 'de' MMMM", { locale: es }))}${isSel ? ' (seleccionada)' : ''}`}
+                aria-label={`${cap(format(d, "EEEE d 'de' MMMM", { locale: es }))}${isSel ? ' (seleccionada)' : ''}${closed ? ' (cerrado)' : ''}`}
+                title={closed ? 'Cerrado' : undefined}
                 onClick={() => {
                   setFocusIdx(i);
                   onChange(format(d, 'yyyy-MM-dd'));

@@ -1472,21 +1472,15 @@ img {
    ============================================================ */
 .week-summary {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);  /* lunes → domingo (agenda real) */
   gap: var(--space-sm);
   margin-bottom: var(--space-lg);
 }
 
+/* Móvil: 7 días en 2 filas de 4 (el domingo suele estar cerrado y estrecho) */
 @media (max-width: 640px) {
   .week-summary {
     grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-/* Pantallas pequeñas: 6 días en 2 filas de 3 (más ancho por día) */
-@media (max-width: 480px) {
-  .week-summary {
-    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -2324,6 +2318,255 @@ html {
 .particles-bg__layer {
   position: absolute;
   inset: 0;
+}
+
+/* ============================================================
+   AGENDA Y CIERRES (cambio admin-agenda-y-cierres, D12)
+   Mobile-first: el admin gestiona horarios/cierres desde el teléfono.
+   ============================================================ */
+.hint-text {
+  font-size: var(--font-size-xs);
+  color: var(--muted);
+  margin: var(--space-sm) 0;
+}
+
+.hint-text--flush {
+  margin-top: 0;
+}
+
+.muted-inline {
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+}
+
+.admin-section {
+  margin-bottom: var(--space-lg);
+}
+
+.admin-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+  margin-top: var(--space-md);
+}
+
+.admin-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+/* Filas del horario semanal: día · abierto/modo · horas */
+.horario-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.horario-row {
+  display: grid;
+  grid-template-columns: 110px minmax(120px, 220px) 1fr;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border);
+}
+
+.horario-row:last-child {
+  border-bottom: 0;
+}
+
+.horario-row.is-closed .horario-dia {
+  color: var(--muted);
+}
+
+.horario-dia {
+  font-weight: 600;
+}
+
+.horario-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 44px;           /* objetivo táctil */
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.horario-toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+
+.horario-horas {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.horario-horas .form-input,
+.horario-horas .form-group {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.horario-horas input[type='time'] {
+  min-height: 44px;
+}
+
+.horario-horas .form-input:disabled {
+  opacity: 0.5;
+}
+
+/* Móvil: el día arriba y los controles debajo a ancho completo */
+@media (max-width: 640px) {
+  .horario-row {
+    grid-template-columns: 1fr auto;
+    padding: var(--space-sm);
+  }
+  .horario-row .horario-horas,
+  .horario-row .horario-modo {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Vista previa de un cierre */
+.cierre-preview {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+}
+
+.cierre-preview p {
+  margin: 0 0 var(--space-sm);
+}
+
+.cierre-citas {
+  margin: var(--space-sm) 0 0;
+  padding-left: 18px;
+  font-size: var(--font-size-sm);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.cierre-citas li {
+  padding: 2px 0;
+}
+
+/* Contador de avisos pendientes en el menú del panel */
+.sidebar-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--danger);
+  color: var(--on-danger);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Cancelación en la tabla de reservas del admin */
+.cancelacion-info {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--font-size-xs);
+}
+
+.cancelacion-info small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* Ingresos por trabajador: importes alineados a la derecha */
+.ingresos-table td:not(:first-child),
+.ingresos-table th:not(:first-child) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.ingresos-table tfoot th,
+.ingresos-table tfoot td {
+  font-weight: 600;
+  border-top: 1px solid var(--border-strong);
+  background: transparent;
+}
+
+/* Móvil: la tabla de ingresos (numérica, se compara en columnas) mantiene el
+   formato tabla con scroll horizontal controlado; el nombre queda fijo a la
+   izquierda para no perder la referencia al desplazar. */
+@media (max-width: 640px) {
+  .ingresos-table th:first-child,
+  .ingresos-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--card-bg);
+    min-width: 120px;
+    box-shadow: 1px 0 0 var(--border);
+  }
+  .ingresos-table thead th:first-child {
+    background: var(--surface-alt);
+  }
+}
+
+.muted-text {
+  color: var(--muted);
+}
+
+/* Panel del trabajador: días sin jornada (cerrado / libre) */
+.day-card.is-closed {
+  background: var(--surface-alt);
+  border-style: dashed;
+}
+
+.day-card:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.day-card:disabled:hover {
+  border-color: var(--border);
+}
+
+.day-card .day-closed {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 36px;          /* misma altura que .day-count */
+}
+
+/* Calendario público: días cerrados tachados */
+.calendar-day.is-closed {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.closed-day-note {
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+  font-weight: 500;
+}
+
+/* "Mis citas": motivo de una cancelación de la barbería */
+.res-cancel-note {
+  flex-basis: 100%;
+  font-size: var(--font-size-xs);
+  color: var(--muted);
 }
 
 /* ---------- 404 ---------- */

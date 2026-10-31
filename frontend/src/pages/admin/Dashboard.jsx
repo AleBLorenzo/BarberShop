@@ -28,17 +28,22 @@ export default function AdminDashboard() {
   const [end, setEnd] = useState(endParam || format(endOfMonth(new Date()), 'yyyy-MM-dd'));
   const [stats, setStats] = useState(null);
   const [topServicios, setTopServicios] = useState([]);
+  // Ingresos por trabajador (D10): mismo rango y criterio que las tarjetas
+  const [ingresos, setIngresos] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const load = useCallback(async (startStr, endStr) => {
     try {
-      const [statsData, topData] = await Promise.all([
+      const [statsData, topData, ingresosData] = await Promise.all([
         adminApi.getStats(startStr, endStr),
         adminApi.getTopServicios(startStr, endStr, 5),
+        // Best-effort: si falla, el resto del dashboard sigue pintándose
+        adminApi.getIngresos(startStr, endStr).catch(() => null),
       ]);
       setStats(statsData);
       setTopServicios(topData);
+      setIngresos(ingresosData);
       setError(null);
       setLoading(false);
     } catch {
@@ -129,6 +134,62 @@ export default function AdminDashboard() {
             <div className="stat-card">
               <div className="stat-label">Tasa no-show</div>
               <div className="stat-value warning">{stats.tasaNoShow}%</div>
+            </div>
+          </div>
+
+          <div className="card admin-section">
+            <div className="card-header">
+              <h3>Ingresos por trabajador</h3>
+            </div>
+            <div className="card-body">
+              {!ingresos ? (
+                <p className="muted-text">No se pudieron cargar los ingresos por trabajador.</p>
+              ) : !ingresos.filas?.length ? (
+                <p className="muted-text">Sin datos en este periodo.</p>
+              ) : (
+                <div className="table-wrapper">
+                  <table className="table ingresos-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Trabajador</th>
+                        <th scope="col">Total</th>
+                        <th scope="col">VISA</th>
+                        <th scope="col">Efectivo</th>
+                        <th scope="col">Completadas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ingresos.filas.map((f) => (
+                        <tr key={f.trabajadorId ?? f.nombre}>
+                          <td>
+                            {f.nombre}
+                            {f.rol === 'ADMIN' && <span className="muted-inline"> · admin</span>}
+                            {f.activo === false && <span className="muted-inline"> · inactivo</span>}
+                          </td>
+                          <td>{formatCurrency(f.total ?? 0)}</td>
+                          <td>{formatCurrency(f.visa ?? 0)}</td>
+                          <td>{formatCurrency(f.efectivo ?? 0)}</td>
+                          <td>{f.completadas ?? 0}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    {ingresos.totales && (
+                      <tfoot>
+                        <tr>
+                          <th scope="row">Total</th>
+                          <td>{formatCurrency(ingresos.totales.total ?? 0)}</td>
+                          <td>{formatCurrency(ingresos.totales.visa ?? 0)}</td>
+                          <td>{formatCurrency(ingresos.totales.efectivo ?? 0)}</td>
+                          <td>{ingresos.totales.completadas ?? 0}</td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              )}
+              <p className="hint-text">
+                Total = completadas + confirmadas; VISA/efectivo solo de las completadas.
+              </p>
             </div>
           </div>
 

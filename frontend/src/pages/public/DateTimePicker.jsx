@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { addDays, format, parseISO } from 'date-fns';
+import { addDays, format, parseISO, startOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { publicApi } from '../../services/api';
 import { dedupeSlots } from '../../utils/slots';
 import { useBooking } from '../../hooks/useBooking';
+import { useDiasCerrados } from '../../hooks/useDiasCerrados';
 import CalendarPicker from '../../components/ui/CalendarPicker';
 import TimeSlotPicker from '../../components/ui/TimeSlotPicker';
 import { ErrorState } from '../../components/ui/EmptyState';
@@ -33,6 +34,17 @@ export default function DateTimePicker() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(draft.slot);
+
+  // Días cerrados del mes visible (horario, festivos, días libres; D12)
+  const minDate = format(new Date(), 'yyyy-MM-dd');
+  const maxDate = format(addDays(new Date(), 60), 'yyyy-MM-dd');
+  const [calMonth, setCalMonth] = useState(() => startOfMonth(parseISO(fecha)));
+  const cerrados = useDiasCerrados(calMonth, {
+    min: minDate,
+    max: maxDate,
+    trabajadorId: draft.trabajador?.id,
+  });
+  const fechaCerrada = cerrados.has(fecha);
 
   const fetchAvailability = async (fechaStr) => {
     if (!fechaStr) return;
@@ -86,9 +98,6 @@ export default function DateTimePicker() {
     navigate('/reservar/confirmar');
   };
 
-  const minDate = format(new Date(), 'yyyy-MM-dd');
-  const maxDate = format(addDays(new Date(), 60), 'yyyy-MM-dd');
-
   return (
     <div>
       {navError && (
@@ -118,18 +127,24 @@ export default function DateTimePicker() {
         onChange={handleDateChange}
         min={minDate}
         max={maxDate}
+        closedDates={cerrados}
+        onMonthChange={setCalMonth}
         required
       />
 
       <div className="form-group">
         <label className="form-label">Horarios disponibles</label>
-        {loading && (
+        {fechaCerrada ? (
+          <p className="closed-day-note" role="status">
+            Cerrado: ese día no se puede reservar. Elige otra fecha.
+          </p>
+        ) : loading && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <Spinner size="sm" /> Consultando disponibilidad...
           </div>
         )}
-        {error && <ErrorState message={error} onRetry={handleRetry} />}
-        {!loading && !error && (
+        {!fechaCerrada && error && <ErrorState message={error} onRetry={handleRetry} />}
+        {!fechaCerrada && !loading && !error && (
           <TimeSlotPicker
             slots={slots}
             selected={selectedSlot?.horaInicio}
@@ -142,7 +157,7 @@ export default function DateTimePicker() {
         <Button variant="ghost" onClick={() => navigate('/reservar/trabajador')}>
           Atrás
         </Button>
-        <Button variant="primary" disabled={!selectedSlot} onClick={handleContinue}>
+        <Button variant="primary" disabled={!selectedSlot || fechaCerrada} onClick={handleContinue}>
           Continuar
         </Button>
       </div>
