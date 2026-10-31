@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { adminApi } from '../../services/api';
-import { formatCurrency } from '../../utils/date';
+import { formatCurrency, formatPercent } from '../../utils/date';
 import PageHeader from '../../components/ui/PageHeader';
 import DatePicker from '../../components/ui/DatePicker';
 import Spinner from '../../components/ui/Spinner';
@@ -76,7 +76,7 @@ export default function AdminDashboard() {
       <PageHeader
         title="Dashboard"
         actions={
-          <div className="filters-bar" style={{ marginBottom: 0 }}>
+          <div className="filters-bar filters-bar--labelled">
             <DatePicker label="Desde" value={start} onChange={handleStartChange} />
             <DatePicker label="Hasta" value={end} onChange={handleEndChange} />
           </div>
@@ -92,50 +92,61 @@ export default function AdminDashboard() {
         </div>
       ) : stats ? (
         <>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-label">Total reservas</div>
-              <div className="stat-value">{stats.totalReservas}</div>
+          {/* KPIs agrupados por tema (dataviz: «KPI row» de stat tiles). Las cifras
+              van siempre en tinta; el nombre de la tarjeta da el significado. */}
+          <section aria-labelledby="kpi-reservas">
+            <h2 id="kpi-reservas" className="stats-group-title">Reservas</h2>
+            <div className="stats-grid stats-grid--tight">
+              <div className="stat-card">
+                <div className="stat-label">Total</div>
+                <div className="stat-value">{stats.totalReservas}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Confirmadas</div>
+                <div className="stat-value">{stats.reservasConfirmadas}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Completadas</div>
+                <div className="stat-value">{stats.reservasCompletadas}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Canceladas</div>
+                <div className="stat-value">{stats.reservasCanceladas}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">No shows</div>
+                <div className="stat-value">{stats.noShows}</div>
+              </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-label">Confirmadas</div>
-              <div className="stat-value accent">{stats.reservasConfirmadas}</div>
+          </section>
+
+          <section aria-labelledby="kpi-ingresos">
+            <h2 id="kpi-ingresos" className="stats-group-title">Ingresos y ocupación</h2>
+            <div className="stats-grid">
+              <div className="stat-card stat-card--wide">
+                <div className="stat-label">Ingresos totales</div>
+                <div className="stat-value">{formatCurrency(stats.ingresosTotales)}</div>
+                {(stats.ingresosVisa != null || stats.ingresosEfectivo != null) && (
+                  <div className="stat-breakdown">
+                    <span>VISA · {formatCurrency(stats.ingresosVisa ?? 0)}</span>
+                    <span>Efectivo · {formatCurrency(stats.ingresosEfectivo ?? 0)}</span>
+                  </div>
+                )}
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Ingreso promedio</div>
+                <div className="stat-value">{formatCurrency(stats.ingresoPromedioPorReserva)}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Tasa de ocupación</div>
+                <div className="stat-value">{formatPercent(stats.tasaOcupacion)}</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-label">Tasa no-show</div>
+                <div className="stat-value">{formatPercent(stats.tasaNoShow)}</div>
+              </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-label">Completadas</div>
-              <div className="stat-value success">{stats.reservasCompletadas}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Canceladas</div>
-              <div className="stat-value danger">{stats.reservasCanceladas}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">No shows</div>
-              <div className="stat-value warning">{stats.noShows}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Ingresos totales</div>
-              <div className="stat-value">{formatCurrency(stats.ingresosTotales)}</div>
-              {(stats.ingresosVisa != null || stats.ingresosEfectivo != null) && (
-                <div className="stat-breakdown">
-                  <span>VISA · {formatCurrency(stats.ingresosVisa ?? 0)}</span>
-                  <span>Efectivo · {formatCurrency(stats.ingresosEfectivo ?? 0)}</span>
-                </div>
-              )}
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Ingreso promedio</div>
-              <div className="stat-value">{formatCurrency(stats.ingresoPromedioPorReserva)}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Tasa de ocupación</div>
-              <div className="stat-value accent">{stats.tasaOcupacion}%</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Tasa no-show</div>
-              <div className="stat-value warning">{stats.tasaNoShow}%</div>
-            </div>
-          </div>
+          </section>
 
           <div className="card admin-section">
             <div className="card-header">
@@ -199,24 +210,33 @@ export default function AdminDashboard() {
             </div>
             <div className="card-body">
               {topServicios.length === 0 ? (
-                <p style={{ color: 'var(--muted)' }}>Sin datos en este periodo.</p>
+                <p className="muted-text">Sin datos en este periodo.</p>
               ) : (
-                <div className="bar-chart" role="img" aria-label="Gráfico de servicios top">
+                /* Lista semántica (antes role="img" con una etiqueta genérica:
+                   el lector de pantalla no leía ningún dato). La barra es
+                   decorativa; nombre y cifras van en texto. */
+                <ul className="bar-chart" aria-label="Servicios más solicitados: reservas e ingresos">
                   {topServicios.map((s) => (
-                    <div key={s.servicioId} className="bar-row">
+                    <li
+                      key={s.servicioId}
+                      className="bar-row"
+                      title={`${s.servicioNombre}: ${s.totalReservas} reservas · ${formatCurrency(s.ingresosGenerados)}`}
+                    >
                       <span className="bar-label">{s.servicioNombre}</span>
-                      <div className="bar-track">
-                        <div
+                      <span className="bar-track" aria-hidden="true">
+                        <span
                           className="bar-fill"
                           style={{ width: `${(s.totalReservas / maxCount) * 100}%` }}
                         />
-                      </div>
-                      <span className="bar-value">
-                        {s.totalReservas} · {formatCurrency(s.ingresosGenerados)}
                       </span>
-                    </div>
+                      <span className="bar-value">
+                        {s.totalReservas} <small>{s.totalReservas === 1 ? 'reserva' : 'reservas'}</small>
+                        {' · '}
+                        {formatCurrency(s.ingresosGenerados)}
+                      </span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
             </div>
           </div>

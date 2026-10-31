@@ -19,7 +19,7 @@ export default function Logo({ height = 36, className = '' }) {
 
   if (etapa >= FUENTES.length) {
     return (
-      <span className={clases} style={{ fontWeight: 600, gap: 'var(--space-sm)' }}>
+      <span className={`${clases} brand-logo--text`}>
         <LuScissors aria-hidden="true" />
         {NOMBRE}
       </span>
@@ -34,6 +34,7 @@ export default function Logo({ height = 36, className = '' }) {
         width={Math.round(height * ASPECTO)}
         height={height}
         fetchPriority="high"
+        // Alto dinámico (prop `height`): el ancho se deriva del aspecto
         style={{ height, width: 'auto', display: 'block' }}
         onError={() => setEtapa((prev) => prev + 1)}
       />

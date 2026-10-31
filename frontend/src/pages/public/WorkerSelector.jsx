@@ -63,32 +63,34 @@ export default function WorkerSelector() {
         <div className="booking-grid">
           <button
             type="button"
-            className={`booking-option ${selected === null ? 'selected' : ''}`}
+            className={`booking-option booking-option--stack ${selected === null ? 'selected' : ''}`}
             onClick={() => setSelected(null)}
             aria-pressed={selected === null}
           >
-            <div style={{ fontSize: 'var(--font-size-2xl)' }}>
-              <LuUsers aria-hidden="true" />
-            </div>
-            <h4>Cualquier disponible</h4>
-            <p>Elige el mejor horario para ti</p>
+            <span className="booking-option-icon" aria-hidden="true">
+              <LuUsers />
+            </span>
+            <span className="booking-option-body">
+              <span className="booking-option-title">Cualquier disponible</span>
+              <span className="booking-option-desc">Elige el mejor horario para ti</span>
+            </span>
           </button>
 
           {trabajadores.map((trab) => (
             <button
               key={trab.id}
               type="button"
-              className={`booking-option ${selected?.id === trab.id ? 'selected' : ''}`}
+              className={`booking-option booking-option--stack ${selected?.id === trab.id ? 'selected' : ''}`}
               onClick={() => setSelected(trab)}
               aria-pressed={selected?.id === trab.id}
             >
               <Avatar src={mediaUrl(trab.foto)} name={trab.nombre} size="xl" />
-              <h4>{trab.nombre}</h4>
-              {trab.descripcion?.trim() ? (
-                <p>{trab.descripcion}</p>
-              ) : (
-                <p>{trab.especialidad || 'Barbero profesional'}</p>
-              )}
+              <span className="booking-option-body">
+                <span className="booking-option-title">{trab.nombre}</span>
+                <span className="booking-option-desc">
+                  {trab.descripcion?.trim() ? trab.descripcion : trab.especialidad || 'Barbero profesional'}
+                </span>
+              </span>
             </button>
           ))}
         </div>

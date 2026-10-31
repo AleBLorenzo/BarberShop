@@ -364,16 +364,8 @@ export default function WorkerDashboard() {
       <PageHeader
         title="Mi semana"
         actions={
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span
-              style={{
-                fontSize: 'var(--font-size-sm)',
-                color: 'var(--muted)',
-                fontWeight: 600,
-                whiteSpace: 'nowrap',
-              }}
-              aria-live="polite"
-            >
+          <div className="week-toolbar">
+            <span className="week-range" aria-live="polite">
               {weekRangeLabel}
             </span>
             <Button
@@ -449,7 +441,7 @@ export default function WorkerDashboard() {
       {/* Day detail */}
       {fechaSeleccionada ? (
         <section aria-label="Reservas del día seleccionado">
-          <h2 style={{ fontSize: 'var(--font-size-lg)' }}>
+          <h2 className="section-subtitle">
             {format(parseISO(fechaSeleccionada), "EEEE dd 'de' MMMM", { locale: es })}
           </h2>
           {agenda[fechaSeleccionada] && (
@@ -488,25 +480,25 @@ export default function WorkerDashboard() {
       <HorasLibres onChange={() => loadAgenda(weekStart)} />
 
       {/* Weekly totals */}
-      <section style={{ marginTop: 'var(--space-xl)' }}>
+      <section className="worker-totals" aria-label="Resumen de la semana">
         <div className="stats-grid">
           <div className="stat-card">
-            <div className="stat-label">Total semanal</div>
-            <div className="stat-value accent">{semana.length}</div>
+            <div className="stat-label">Citas</div>
+            <div className="stat-value">{semana.length}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Confirmadas</div>
-            <div className="stat-value success">
+            <div className="stat-value">
               {semana.filter((r) => r.estado === 'CONFIRMADA').length}
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-label">Pendientes</div>
-            <div className="stat-value warning">
+            <div className="stat-value">
               {semana.filter((r) => r.estado === 'PENDIENTE').length}
             </div>
           </div>
-          <div className="stat-card">
+          <div className="stat-card stat-card--wide">
             <div className="stat-label">Ingresos semana</div>
             <div className="stat-value">{formatCurrency(ingresosSemana.total)}</div>
             <div className="stat-breakdown">
@@ -514,7 +506,7 @@ export default function WorkerDashboard() {
               <span>Efectivo · {formatCurrency(ingresosSemana.efectivo)}</span>
             </div>
           </div>
-          <div className="stat-card">
+          <div className="stat-card stat-card--wide">
             <div className="stat-label">Ingresos diario</div>
             <div className="stat-value">{formatCurrency(ingresosDia.total)}</div>
             <div className="stat-breakdown">
@@ -522,7 +514,7 @@ export default function WorkerDashboard() {
               <span>Efectivo · {formatCurrency(ingresosDia.efectivo)}</span>
             </div>
           </div>
-          <div className="stat-card">
+          <div className="stat-card stat-card--wide">
             <div className="stat-label">Ingresos mensual</div>
             <div className="stat-value">{formatCurrency(ingresosMes.total)}</div>
             <div className="stat-breakdown">
@@ -551,7 +543,7 @@ export default function WorkerDashboard() {
         }
       >
         {fieldErrors.submit && (
-          <p className="form-error" role="alert" style={{ textAlign: 'center' }}>
+          <p className="form-error form-error--center" role="alert">
             {fieldErrors.submit}
           </p>
         )}
@@ -584,16 +576,16 @@ export default function WorkerDashboard() {
 
         <div className="form-group">
           <label className="form-label" htmlFor="nueva-hora">
-            Horario<span style={{ color: 'var(--danger)' }}> *</span>
+            Horario<span className="required-mark" aria-hidden="true">*</span>
           </label>
           {!form.servicioId ? (
-            <p style={{ color: 'var(--muted)' }}>Elige un servicio para ver los huecos disponibles.</p>
+            <p className="muted-text">Elige un servicio para ver los huecos disponibles.</p>
           ) : diaNuevaCita && !diaNuevaCita.trabaja && !slotsLoading ? (
             <p className="form-error" role="alert">
               {diaNuevaCita.descripcion || 'Ese día no hay jornada'}: elige otra fecha.
             </p>
           ) : slotsLoading ? (
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div className="inline-loading" role="status">
               <Spinner size="sm" /> Consultando disponibilidad...
             </div>
           ) : (
@@ -642,7 +634,7 @@ export default function WorkerDashboard() {
           onChange={(e) => setField('clienteEmail', e.target.value)}
           error={fieldErrors.clienteEmail}
         />
-        <small style={{ color: 'var(--muted)' }}>
+        <small className="muted-text">
           {form.clienteEmail.trim()
             ? 'Se enviará la confirmación de la cita al cliente por correo.'
             : 'Sin email no se enviará la confirmación al cliente; el token queda en pantalla.'}

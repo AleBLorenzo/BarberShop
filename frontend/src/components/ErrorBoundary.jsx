@@ -34,7 +34,7 @@ export default class ErrorBoundary extends Component {
       return (
         <div className="error-boundary" role="alert">
           <h2>Algo salió mal</h2>
-          <p style={{ color: 'var(--muted)' }}>
+          <p className="muted-text">
             {this.state.error?.message || 'Error inesperado en la aplicación.'}
           </p>
           <Button variant="primary" onClick={this.handleReset}>

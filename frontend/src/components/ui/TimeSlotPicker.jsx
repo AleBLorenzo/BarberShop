@@ -9,14 +9,14 @@ export default function TimeSlotPicker({ slots = [], selected, onSelect, loading
     return (
       <div className="time-slot-grid">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="skeleton" style={{ height: 40 }} />
+          <div key={i} className="skeleton skeleton--slot" />
         ))}
       </div>
     );
   }
 
   if (slots.length === 0) {
-    return <p style={{ color: 'var(--muted)' }}>No hay horarios disponibles para esta fecha.</p>;
+    return <p className="muted-text">No hay horarios disponibles para esta fecha.</p>;
   }
 
   return (
@@ -36,7 +36,7 @@ export default function TimeSlotPicker({ slots = [], selected, onSelect, loading
           >
             {slot.horaInicio.slice(0, 5)}
             {!slot.disponible && (
-              <LuX aria-hidden="true" style={{ marginLeft: 'var(--space-xs)' }} />
+              <LuX aria-hidden="true" className="icon-trail" />
             )}
           </button>
         );

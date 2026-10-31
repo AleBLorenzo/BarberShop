@@ -11,7 +11,7 @@ export default function Terminos() {
   });
 
   return (
-    <article style={{ maxWidth: 760, margin: '0 auto' }}>
+    <article className="legal-page">
       <h1>Términos y condiciones de uso</h1>
       <p>
         Estas condiciones regulan el uso del servicio de reservas en línea de {NOMBRE}.

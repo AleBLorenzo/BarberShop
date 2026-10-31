@@ -49,7 +49,7 @@ export default function DashLayout({ brand, links, roleLabel }) {
       <aside id="dash-sidebar" className={`dash-sidebar ${open ? 'open' : ''}`}>
         <div className="sidebar-brand">
           {/* El sidebar es oscuro en modo oscuro: fondo blanco para que el logo se vea */}
-          <span style={{ background: '#fff', padding: 6, borderRadius: 'var(--radius-sm)' }}>
+          <span className="sidebar-logo">
             <Logo height={40} />
           </span>
           {brand}
@@ -74,10 +74,7 @@ export default function DashLayout({ brand, links, roleLabel }) {
               )}
             </NavLink>
           ))}
-          <button className="sidebar-link logout" onClick={handleLogout} style={{
-            background: 'none', border: 'none', textAlign: 'left', width: '100%', cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: 'inherit'
-          }}>
+          <button type="button" className="sidebar-link logout" onClick={handleLogout}>
             Cerrar sesión
           </button>
         </nav>
@@ -101,12 +98,12 @@ export default function DashLayout({ brand, links, roleLabel }) {
           >
             <LuMenu aria-hidden="true" />
           </button>
-          <div className="dash-user" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span className="dash-role" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--muted)' }}>{roleLabel}</span>
+          <div className="dash-user">
+            <span className="dash-role">{roleLabel}</span>
             <Avatar src={mediaUrl(user?.foto)} name={user?.nombre || ''} size="sm" />
             <div className="dash-user-info">
-              <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>{user?.nombre}</div>
-              <div className="dash-user-email" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--muted)' }}>{user?.email}</div>
+              <div className="dash-user-name">{user?.nombre}</div>
+              <div className="dash-user-email">{user?.email}</div>
             </div>
           </div>
         </header>
@@ -117,17 +114,7 @@ export default function DashLayout({ brand, links, roleLabel }) {
             <Outlet />
           </Suspense>
         </main>
-        <footer
-          style={{
-            borderTop: '1px solid var(--border)',
-            padding: '12px 24px',
-            fontSize: 'var(--font-size-xs)',
-            color: 'var(--muted)',
-            display: 'flex',
-            gap: 16,
-            flexWrap: 'wrap',
-          }}
-        >
+        <footer className="dash-footer">
           <Link to="/legal/privacidad">Privacidad</Link>
           <Link to="/legal/terminos">Términos</Link>
           <Link to="/legal/cookies">Cookies</Link>

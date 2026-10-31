@@ -59,41 +59,34 @@ export default function ServiceSelector() {
             <button
               key={serv.id}
               type="button"
-              className={`booking-option ${selected?.id === serv.id ? 'selected' : ''}`}
+              className={`booking-option booking-option--row ${selected?.id === serv.id ? 'selected' : ''}`}
               onClick={() => setSelected(serv)}
               aria-pressed={selected?.id === serv.id}
             >
               {serv.foto && (
                 <img
+                  className="booking-option-media"
                   src={mediaUrl(serv.foto)}
                   alt=""
                   loading="lazy"
-                  style={{
-                    width: 72,
-                    height: 72,
-                    display: 'block',
-                    objectFit: 'cover',
-                    borderRadius: 'var(--radius-md)',
-                    margin: '0 auto 8px',
-                  }}
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
               )}
-              <h4>{serv.nombre}</h4>
-              {serv.descripcion && <p>{serv.descripcion}</p>}
-              <p>
-                <strong>
-                  <PriceWithOffer
-                    precio={serv.precio}
-                    precioOferta={serv.precioOferta}
-                    ofertaActiva={serv.ofertaActiva}
-                    descuentoPorcentaje={serv.descuentoPorcentaje}
-                    ofertaInicio={serv.ofertaInicio}
-                    ofertaFin={serv.ofertaFin}
-                  />
-                </strong>
-              </p>
-              <p>{serv.duracionMinutos} min</p>
+              <span className="booking-option-body">
+                <span className="booking-option-title">{serv.nombre}</span>
+                {serv.descripcion && <span className="booking-option-desc">{serv.descripcion}</span>}
+                <span className="booking-option-meta">{serv.duracionMinutos} min</span>
+              </span>
+              <span className="booking-option-price">
+                <PriceWithOffer
+                  precio={serv.precio}
+                  precioOferta={serv.precioOferta}
+                  ofertaActiva={serv.ofertaActiva}
+                  descuentoPorcentaje={serv.descuentoPorcentaje}
+                  ofertaInicio={serv.ofertaInicio}
+                  ofertaFin={serv.ofertaFin}
+                />
+              </span>
             </button>
           ))}
         </div>

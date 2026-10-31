@@ -163,7 +163,7 @@ export default function WorkerProfile() {
     <div>
       <PageHeader title="Mi perfil" />
 
-      <div className="card" style={{ padding: 'var(--space-lg)' }}>
+      <div className="card profile-card">
         <div className="profile-grid">
           <div className="profile-photo">
             <Avatar
@@ -171,7 +171,7 @@ export default function WorkerProfile() {
               name={(editing ? form.nombre : perfil?.nombre) || ''}
               size="xl"
             />
-            <p style={{ color: 'var(--muted)', fontSize: 'var(--font-size-sm)' }}>
+            <p className="muted-text text-sm">
               {(editing ? form.nombre : perfil?.nombre) || ''}
             </p>
           </div>
@@ -179,7 +179,7 @@ export default function WorkerProfile() {
             {editing ? (
               <form onSubmit={handleSave} noValidate>
                 {fieldErrors.submit && (
-                  <p className="form-error" role="alert" style={{ textAlign: 'center' }}>
+                  <p className="form-error form-error--center" role="alert">
                     {fieldErrors.submit}
                   </p>
                 )}
@@ -226,18 +226,11 @@ export default function WorkerProfile() {
                     onChange={handleFotoFile}
                   />
                   {form.foto && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 'var(--space-sm)',
-                        marginTop: 'var(--space-sm)',
-                      }}
-                    >
+                    <div className="photo-preview">
                       <img
                         src={mediaUrl(form.foto)}
                         alt="Vista previa de la foto"
-                        style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6 }}
+                        className="photo-preview__img"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
                         }}
@@ -249,7 +242,7 @@ export default function WorkerProfile() {
                   )}
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, marginTop: 'var(--space-md)' }}>
+                <div className="form-actions">
                   <Button type="submit" variant="primary" loading={saving}>
                     {saving ? 'Guardando...' : 'Guardar'}
                   </Button>
@@ -273,12 +266,12 @@ export default function WorkerProfile() {
                   <span>
                     {perfil?.activo ? (
                       <>
-                        <LuCheck aria-hidden="true" style={{ marginRight: 6 }} />
+                        <LuCheck aria-hidden="true" className="icon-lead" />
                         Activo
                       </>
                     ) : (
                       <>
-                        <LuPause aria-hidden="true" style={{ marginRight: 6 }} />
+                        <LuPause aria-hidden="true" className="icon-lead" />
                         Inactivo
                       </>
                     )}
@@ -290,7 +283,7 @@ export default function WorkerProfile() {
                     <span>{perfil.descripcion}</span>
                   </div>
                 )}
-                <div style={{ marginTop: 'var(--space-md)' }}>
+                <div className="mt-md">
                   <Button variant="secondary" onClick={startEditing}>
                     Editar perfil
                   </Button>

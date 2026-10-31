@@ -11,7 +11,7 @@ export default function Privacidad() {
   });
 
   return (
-    <article style={{ maxWidth: 760, margin: '0 auto' }}>
+    <article className="legal-page">
       <h1>Política de privacidad</h1>
       <p>
         <b>Responsable del tratamiento:</b> {NOMBRE} — {DIRECCION}.

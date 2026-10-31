@@ -99,7 +99,7 @@ export default function CalendarPicker({ label, value, onChange, min, max, error
       {label && (
         <div className="form-label">
           {label}
-          {required && <span style={{ color: 'var(--danger)' }}> *</span>}
+          {required && <span className="required-mark" aria-hidden="true">*</span>}
         </div>
       )}
       <div className="calendar" role="group" aria-label={label || 'Calendario'}>

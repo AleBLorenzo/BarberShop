@@ -207,7 +207,7 @@ export default function AdminWorkers() {
   };
 
   const columns = [
-    { key: 'nombre', label: 'Nombre' },
+    { key: 'nombre', label: 'Nombre', mobile: 'title' },
     { key: 'email', label: 'Email' },
     {
       key: 'foto',
@@ -218,16 +218,10 @@ export default function AdminWorkers() {
             src={mediaUrl(row.foto)}
             alt={row.nombre}
             loading="lazy"
-            style={{
-              width: 40,
-              height: 40,
-              objectFit: 'cover',
-              borderRadius: 6,
-              background: 'var(--border)',
-            }}
+            className="table-thumb"
             onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
-        ) : '—'
+        ) : <span className="cell-empty">—</span>
       ),
     },
     {
@@ -258,7 +252,7 @@ export default function AdminWorkers() {
       key: 'actions',
       label: 'Acciones',
       render: (row) => (
-        <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <span className="row-actions">
           <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
             Editar
           </Button>
@@ -363,10 +357,9 @@ export default function AdminWorkers() {
             />
             <select
               id="foto-carpeta"
-              className="form-select"
+              className="form-select mt-xs"
               value=""
               aria-label="…o elegir de la carpeta"
-              style={{ marginTop: 'var(--space-xs)' }}
               onChange={handleFotoCarpeta}
             >
               <option value="">…o elegir de la carpeta</option>
@@ -377,18 +370,11 @@ export default function AdminWorkers() {
               ))}
             </select>
             {foto && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-sm)',
-                  marginTop: 'var(--space-sm)',
-                }}
-              >
+              <div className="photo-preview">
                 <img
                   src={mediaUrl(foto)}
                   alt="Vista previa de la foto"
-                  style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6 }}
+                  className="photo-preview__img"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
                 <Button size="sm" variant="ghost" onClick={() => setValue('foto', '')}>
@@ -408,7 +394,7 @@ export default function AdminWorkers() {
               maxLength: { value: 500, message: 'Máximo 500 caracteres' },
             })}
           />
-          <div className="form-group" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className="form-group form-check">
             <input type="checkbox" id="activo" {...register('activo')} />
             <label htmlFor="activo">Activo</label>
           </div>

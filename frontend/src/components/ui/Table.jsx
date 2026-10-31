@@ -1,12 +1,23 @@
 import { EmptyState } from './EmptyState';
 import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 
-// Gap entre el chevron y el texto: .pagination button no es flex (sin tocar App.css)
-const chevronBtnStyle = { display: 'inline-flex', alignItems: 'center', gap: 'var(--space-xs)' };
+/**
+ * Clase de la celda para la vista móvil en tarjetas (≤640px, ver `.table--stack`
+ * en App.css): `title` = cabecera de la tarjeta, `hide` = se oculta en móvil,
+ * la columna `actions` va al pie de la tarjeta a ancho completo.
+ */
+function cellClass(col) {
+  if (col.key === 'actions') return 'cell-actions';
+  if (col.mobile === 'title') return 'cell-title';
+  if (col.mobile === 'hide') return 'cell-hide-mobile';
+  return undefined;
+}
 
 /**
  * Table component with pagination and empty state.
- * @param {{columns: Array<{key: string, label: string, render?: Function, width?: string}>, data: any[], emptyMessage?: string, page?: number, totalPages?: number, onPageChange?: Function, loading?: boolean}} props
+ * En móvil cada fila se muestra como una tarjeta (etiqueta: valor) en vez de
+ * desbordar en horizontal; en escritorio es una tabla normal.
+ * @param {{columns: Array<{key: string, label: string, render?: Function, width?: string, mobile?: 'title'|'hide'}>, data: any[], emptyMessage?: string, page?: number, totalPages?: number, onPageChange?: Function, loading?: boolean}} props
  */
 export default function Table({
   columns,
@@ -19,10 +30,10 @@ export default function Table({
 }) {
   if (loading) {
     return (
-      <div className="table-wrapper">
-        <div className="skeleton" style={{ height: 40 }} />
+      <div className="table-skeleton" aria-busy="true" aria-label="Cargando">
+        <div className="skeleton table-skeleton-head" />
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="skeleton" style={{ height: 48, marginTop: 4 }} />
+          <div key={i} className="skeleton table-skeleton-row" />
         ))}
       </div>
     );
@@ -35,11 +46,11 @@ export default function Table({
   return (
     <div>
       <div className="table-wrapper">
-        <table className="table">
+        <table className="table table--stack">
           <thead>
             <tr>
               {columns.map((col) => (
-                <th key={col.key} style={col.width ? { width: col.width } : undefined}>
+                <th key={col.key} scope="col" style={col.width ? { width: col.width } : undefined}>
                   {col.label}
                 </th>
               ))}
@@ -49,7 +60,7 @@ export default function Table({
             {data.map((row, idx) => (
               <tr key={row.id ?? idx}>
                 {columns.map((col) => (
-                  <td key={col.key}>
+                  <td key={col.key} data-label={col.label} className={cellClass(col)}>
                     {col.render ? col.render(row) : row[col.key]}
                   </td>
                 ))}
@@ -64,7 +75,6 @@ export default function Table({
             onClick={() => onPageChange(page - 1)}
             disabled={page <= 1}
             aria-label="Página anterior"
-            style={chevronBtnStyle}
           >
             <LuChevronLeft aria-hidden="true" />
             Anterior
@@ -74,6 +84,8 @@ export default function Table({
               key={i}
               className={page === i + 1 ? 'active' : ''}
               onClick={() => onPageChange(i + 1)}
+              aria-current={page === i + 1 ? 'page' : undefined}
+              aria-label={`Página ${i + 1}`}
             >
               {i + 1}
             </button>
@@ -82,7 +94,6 @@ export default function Table({
             onClick={() => onPageChange(page + 1)}
             disabled={page >= totalPages}
             aria-label="Página siguiente"
-            style={chevronBtnStyle}
           >
             Siguiente
             <LuChevronRight aria-hidden="true" />

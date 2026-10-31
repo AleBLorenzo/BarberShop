@@ -2,6 +2,8 @@
    DESIGN TOKENS
    ============================================================ */
 :root {
+  /* Controles nativos (iconos de date/time, scrollbars) siguen el tema */
+  color-scheme: light;
   /* Colors — DESIGN.md (shadcn): paleta monocroma de 8 tokens */
   --bg: #f5f5f5;              /* canvas: fondo de página */
   --surface-alt: #fafafa;     /* surface-alt: sidebar, superficies sutiles */
@@ -9,7 +11,10 @@
   --text: #0a0a0a;            /* ink: texto primario */
   --text-h: #0a0a0a;          /* ink: titulares */
   --ink-soft: #171717;        /* ink-soft: acción rellena secundaria, texto tonal */
-  --muted: #737373;           /* mid-gray: texto secundario y placeholders */
+  /* mid-gray: texto secundario y placeholders. #737373 (guía) da 4.35:1 sobre
+     el canvas #f5f5f5 (falla AA en 12–14px); #6b6b6b da 4.9:1 y cumple la regla
+     de DESIGN.md «no más claro que #737373». Sobre blanco: 5.3:1. */
+  --muted: #6b6b6b;
   --border: #e5e5e5;          /* hairline: bordes de card e inputs */
   --border-strong: #d4d4d4;   /* hairline reforzado para controles interactivos */
   /* Borde de inputs/selects/textarea en reposo (WCAG 1.4.11, contraste no
@@ -23,10 +28,10 @@
   --accent-bg: rgba(10, 10, 10, 0.06);
   --accent-border: rgba(10, 10, 10, 0.75);
   --success: #0a0a0a;
-  --warning: #737373;
+  --warning: #6b6b6b;
   --danger: #e7000b;          /* ember: SOLO destructivos/errores/validación */
   --on-danger: #ffffff;       /* texto sobre ember: 4.77:1 — AA */
-  --info: #737373;
+  --info: #6b6b6b;
   --social-bg: rgba(10, 10, 10, 0.05);
 
   /* Spacing — base 4px, densidad compacta */
@@ -80,6 +85,7 @@
 /* Modo oscuro = inversión de roles (mismo sistema DESIGN.md, valores remapeados) */
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;       /* antes el icono del input date quedaba negro sobre negro */
     --bg: #0a0a0a;            /* canvas oscuro */
     --surface-alt: #111111;
     --card-bg: #171717;        /* paper invertido */
@@ -465,6 +471,14 @@ img {
   outline-offset: 2px;
 }
 
+/* Red de seguridad: cualquier enlace/control sin regla propia (nav pública,
+   pie, «×» del modal, casillas, botones del toast…) muestra el mismo anillo.
+   :where() = especificidad 0, las reglas concretas siguen mandando. */
+:where(a, button, summary, [tabindex], input[type='checkbox'], input[type='radio']):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* Mismo anillo de foco en el resto de controles navegables con teclado */
 .dash-sidebar .sidebar-link:focus-visible,
 .time-slot:focus-visible,
@@ -652,6 +666,50 @@ img {
   border-color: var(--input-border-hover);
 }
 
+.form-input:disabled,
+.form-select:disabled,
+.form-textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Asterisco de campo obligatorio (decorativo: el input ya lleva `required`) */
+.required-mark {
+  color: var(--danger);
+  margin-left: 2px;
+}
+
+/* Casilla + texto en línea (Recordarme, Activo, Reservable…) */
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 44px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.form-check input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  accent-color: var(--accent);
+}
+
+/* Móvil: 16px evita el zoom automático de iOS al enfocar y 44px de alto
+   da un objetivo táctil cómodo (formularios usados con una mano) */
+@media (max-width: 640px) {
+  .form-input,
+  .form-select,
+  .form-textarea {
+    font-size: 16px;
+  }
+  .form-input,
+  .form-select {
+    min-height: 44px;
+  }
+}
+
 .form-input.error,
 .form-select.error {
   border-color: var(--danger);
@@ -661,6 +719,19 @@ img {
   color: var(--danger);
   font-size: var(--font-size-xs);
   margin-top: var(--space-xs);
+}
+
+.form-error--center {
+  text-align: center;
+}
+
+/* Spinner pequeño + texto en línea («Consultando disponibilidad…») */
+.inline-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--muted);
+  font-size: var(--font-size-sm);
 }
 
 .form-textarea {
@@ -865,6 +936,28 @@ img {
     min-width: 44px;
     min-height: 44px;         /* la «×» de cerrar también es táctil */
   }
+  /* Hoja inferior: el modal sube desde abajo y sus botones quedan al alcance
+     del pulgar (formularios de Nueva cita, Bloquear horas, Cancelar y avisar) */
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal {
+    max-height: 92vh;
+    max-height: 92dvh;
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    animation: sheet-up 0.25s var(--ease-out-expo, ease-out);
+  }
+  .modal-footer {
+    position: sticky;
+    bottom: 0;
+    background: var(--card-bg);
+    padding-bottom: calc(var(--card-padding) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@keyframes sheet-up {
+  from { transform: translateY(24px); opacity: 0; }
 }
 
 /* ============================================================
@@ -884,7 +977,7 @@ img {
 
 .table th {
   text-align: left;
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-sm) 12px;   /* 12px: tablas de 9 columnas (Reservas) caben a 1280px */
   background: var(--social-bg);
   font-weight: 500;
   border-bottom: 1px solid var(--border);
@@ -892,7 +985,7 @@ img {
 }
 
 .table td {
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-sm) 12px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
@@ -905,6 +998,167 @@ img {
   text-align: center;
   padding: var(--space-2xl);
   color: var(--muted);
+}
+
+/* Cifras alineadas en columna (importes, contadores, fechas) */
+.table td,
+.stat-value,
+.bar-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.nowrap { white-space: nowrap; }
+
+/* Texto largo en una celda (reseñas): medida legible en escritorio */
+.cell-text-clamp {
+  display: block;
+  max-width: 360px;
+}
+
+/* Precio con oferta en la tabla de servicios */
+.price-offer {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.price-offer s {
+  opacity: 0.6;
+}
+
+/* Selector de estado dentro de una fila (Reservas) */
+.form-select--compact {
+  width: auto;
+  padding: 4px 8px;
+  font-size: var(--font-size-xs);
+}
+
+/* Esqueleto de carga de la tabla */
+.table-skeleton-head { height: 40px; border-radius: var(--radius-md); }
+.table-skeleton-row { height: 48px; margin-top: var(--space-xs); border-radius: var(--radius-md); }
+
+/* Acciones de fila: mismo grupo en todas las tablas (antes inline en cada página).
+   El destructivo dentro de una fila va en contorno (texto ember): el relleno rojo
+   queda para el botón de confirmación del modal — DESIGN: «text or icon in ember». */
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.row-actions .btn-danger,
+.res-actions .btn-danger {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--border);
+  --spinner: var(--danger);
+}
+
+.row-actions .btn-danger:hover:not(:disabled),
+.res-actions .btn-danger:hover:not(:disabled) {
+  filter: none;
+  border-color: var(--danger);
+}
+
+/* Miniatura de foto en tablas (servicios, trabajadores, resultados) */
+.table-thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  background: var(--border);
+  display: block;
+}
+
+/* ---------- Tabla → tarjetas en móvil (≤640px) ----------
+   Cada fila es una tarjeta; cada celda «Etiqueta ··· valor» con la etiqueta
+   tomada de data-label. La columna de acciones va al pie a ancho completo. */
+@media (max-width: 640px) {
+  .table--stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .table--stack,
+  .table--stack tbody,
+  .table--stack tr,
+  .table--stack td {
+    display: block;
+    width: 100%;
+  }
+  .table--stack tbody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  .table--stack tr {
+    display: flex;
+    flex-direction: column;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: var(--space-sm) var(--space-md);
+  }
+  .table--stack tbody tr:hover {
+    background: var(--card-bg);
+  }
+  .table--stack td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: 6px 0;
+    border-bottom: 0;
+    text-align: right;
+    min-height: 32px;
+    overflow-wrap: anywhere;
+  }
+  .table--stack td::before {
+    content: attr(data-label);
+    flex: none;
+    max-width: 45%;
+    text-align: left;
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .table--stack td.cell-title {
+    order: -1;               /* el título encabeza la tarjeta aunque no sea la 1.ª columna */
+    font-size: 16px;
+    font-weight: 600;
+    justify-content: flex-start;
+    text-align: left;
+    padding-bottom: var(--space-sm);
+  }
+  .table--stack td.cell-title::before,
+  .table--stack td.cell-actions::before {
+    display: none;
+  }
+  .table--stack td.cell-hide-mobile,
+  .table--stack td:has(> .cell-empty) {
+    display: none;            /* filas «Foto: —», «Cancelación: —» = ruido */
+  }
+  .table--stack td.cell-actions {
+    margin-top: var(--space-xs);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--border);
+  }
+  .table--stack td.cell-actions .row-actions {
+    width: 100%;
+  }
+  .table--stack td.cell-actions .row-actions > * {
+    flex: 1 1 auto;
+  }
+  .table--stack td .form-select {
+    width: auto;
+    max-width: 60%;
+    min-height: 44px;
+    font-size: 16px;
+  }
 }
 
 /* ============================================================
@@ -1066,23 +1320,96 @@ img {
   align-items: center;
 }
 
-/* Móvil: sin menú hamburguesa — la navegación pasa a una segunda fila */
+.public-brand {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+
+/* Enlaces de la nav: gris en reposo, tinta + subrayado fino si están activos
+   (--muted sobre blanco = 5.3:1, AA) */
+.public-nav .nav-link {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: var(--font-size-sm);
+  padding: 6px 0;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 2px;
+  transition: color var(--transition-fast);
+}
+
+.public-nav .nav-link:hover {
+  color: var(--text);
+}
+
+.public-nav .nav-link.active {
+  color: var(--text);
+  text-decoration-line: underline;
+}
+
+.public-nav .nav-cta.active {
+  border-color: var(--accent);
+}
+
+/* Móvil: una sola fila (logo + Reservar · Mis citas · Área personal). «Inicio»
+   se oculta: el logo ya enlaza a la portada. Antes la nav ocupaba una 2.ª fila
+   y el header sticky se comía ~120px de pantalla. */
 @media (max-width: 640px) {
   .public-header {
+    padding: 8px 16px;
+    gap: var(--space-sm);
+  }
+  .public-nav {
+    gap: 14px;
+  }
+  .public-nav .nav-home {
+    display: none;
+  }
+  /* Enlaces de texto: área de toque ≥44px sin cambiar el aspecto */
+  .public-nav .nav-link {
+    padding: 12px 0;
+  }
+  .public-nav .nav-cta {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+/* Pantallas muy estrechas (≤360px): la nav pasa a su propia fila */
+@media (max-width: 360px) {
+  .public-header {
     flex-wrap: wrap;
-    padding: 12px 16px;
-    row-gap: 10px;
   }
   .public-nav {
     flex: 1 1 100%;
-    flex-wrap: wrap;
-    gap: 10px 14px;
-    justify-content: flex-start;
+    justify-content: space-between;
   }
-  /* Enlaces de texto: área de toque ≥44px sin cambiar el aspecto */
-  .public-nav a:not(.btn) {
-    padding: 10px 2px;
-  }
+}
+
+/* Enlaces del pie: separados y con área de toque cómoda */
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-xs) var(--space-md);
+}
+
+.footer-links a {
+  color: var(--text);
+  padding: 6px 0;
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.footer-links--legal {
+  font-size: var(--font-size-xs);
+}
+
+.footer-links--legal a {
+  color: var(--muted);
 }
 
 /* Dashboard layout (worker/admin) */
@@ -1149,6 +1476,45 @@ img {
 .dash-sidebar .sidebar-link.logout {
   color: var(--muted);      /* logout no es destructivo: fuera del ember */
   margin-top: auto;
+  background: none;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.dash-sidebar .sidebar-link.logout:hover {
+  background: var(--social-bg);
+  color: var(--text);
+}
+
+/* Placa blanca tras el logo: en modo oscuro el arte negro seguiría visible */
+.sidebar-logo {
+  display: inline-flex;
+  background: #ffffff;
+  padding: 6px;
+  border-radius: var(--radius-md);
+}
+
+.dash-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
+  padding: var(--space-sm) var(--space-lg);
+  border-top: 1px solid var(--border);
+  font-size: var(--font-size-xs);
+}
+
+.dash-footer a {
+  color: var(--muted);
+  padding: var(--space-xs) 0;
+}
+
+.dash-footer a:hover {
+  color: var(--text);
 }
 
 .dash-main {
@@ -1169,9 +1535,30 @@ img {
   z-index: 100;
 }
 
-/* Bloque de usuario del topbar: el email largo puede partirse en vez de desbordar */
+/* Bloque de usuario del topbar: a la derecha (en escritorio no hay hamburguesa
+   y quedaba pegado a la izquierda); el email largo parte línea */
 .dash-topbar .dash-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
   min-width: 0;
+  margin-left: auto;
+}
+
+.dash-topbar .dash-role {
+  font-size: var(--font-size-sm);
+  color: var(--muted);
+  margin-right: var(--space-xs);
+}
+
+.dash-topbar .dash-user-name {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.dash-topbar .dash-user-email {
+  font-size: var(--font-size-xs);
+  color: var(--muted);
 }
 
 .dash-topbar .dash-user-info {
@@ -1311,11 +1698,24 @@ img {
   margin: 0 auto;
 }
 
+.booking-title {
+  text-align: center;
+  font-size: var(--font-size-xl);
+  letter-spacing: var(--tracking-heading-sm);
+  margin: var(--space-sm) 0 var(--space-lg);
+}
+
 .step-indicator {
+  margin-bottom: var(--space-xl);
+}
+
+.step-list {
   display: flex;
   justify-content: center;
-  gap: var(--space-xs);
-  margin-bottom: var(--space-xl);
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .step-indicator .step {
@@ -1327,29 +1727,37 @@ img {
 .step-indicator .step-circle {
   width: 32px;
   height: 32px;
+  flex: none;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: var(--font-size-sm);
   font-weight: 600;
-  background: var(--social-bg);
+  background: var(--card-bg);
+  border: 1px solid var(--border-strong);
   color: var(--muted);
 }
 
 .step-indicator .step.active .step-circle {
   background: var(--accent);
+  border-color: var(--accent);
   color: var(--bg);
 }
 
+/* Completado: contorno en tinta con ✓ (distinto del activo relleno) */
 .step-indicator .step.done .step-circle {
-  background: var(--success);
-  color: var(--bg);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .step-indicator .step-label {
   font-size: var(--font-size-sm);
   color: var(--muted);
+}
+
+.step-indicator .step.done .step-label {
+  color: var(--text);
 }
 
 .step-indicator .step.active .step-label {
@@ -1360,23 +1768,47 @@ img {
 .step-indicator .step-line {
   width: 40px;
   height: 2px;
+  margin-right: var(--space-sm);
   background: var(--border);
 }
 
-/* Móvil: las 4 etiquetas + conectores no caben en 360–414px → los pasos
-   pasan a dos filas centradas y los conectores se ocultan */
+/* Tramo ya recorrido de la línea de progreso */
+.step-indicator .step.done .step-line {
+  background: var(--accent);
+}
+
+.step-caption {
+  display: none;
+}
+
+/* Móvil: solo círculos + líneas (las 4 etiquetas no caben en 360–414px)
+   y debajo «Paso N de 4 · Etiqueta» */
 @media (max-width: 640px) {
   .step-indicator {
-    flex-wrap: wrap;
-    justify-content: center;
-    row-gap: var(--space-sm);
     margin-bottom: var(--space-lg);
   }
-  .step-indicator .step-line {
-    display: none;
-  }
   .step-indicator .step-label {
-    font-size: var(--font-size-xs);
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .step-indicator .step-line {
+    width: 32px;
+    margin: 0 var(--space-xs) 0 0;
+  }
+  .step-indicator .step {
+    gap: var(--space-xs);
+  }
+  .step-caption {
+    display: block;
+    margin: var(--space-sm) 0 0;
+    text-align: center;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text);
   }
 }
 
@@ -1392,27 +1824,112 @@ img {
   border-radius: var(--radius-pill); /* tile interactivo: 18px */
   padding: var(--space-md);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
   text-align: center;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--text);
 }
 
 .booking-option:hover {
   border-color: var(--accent-border);
 }
 
+/* Seleccionado: anillo de 2px en tinta (borde + sombra interior, sin saltos
+   de layout) — antes 1px + gris 6% apenas se distinguía del resto */
 .booking-option.selected {
   border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
   background: var(--accent-bg);
 }
 
-.booking-option h4 {
-  margin: var(--space-sm) 0 var(--space-xs);
+.booking-option-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
-.booking-option p {
+.booking-option-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.booking-option-desc,
+.booking-option-meta {
   color: var(--muted);
   font-size: var(--font-size-sm);
-  margin: var(--space-xs) 0;
+}
+
+.booking-option-price {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.booking-option-media {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+}
+
+.booking-option-icon {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent-bg);
+  font-size: var(--font-size-xl);
+}
+
+/* Fila: [foto] nombre/duración ······ precio (servicios: se escanea por precio) */
+.booking-option--row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  text-align: left;
+  min-height: 72px;
+}
+
+.booking-option--row .booking-option-body {
+  flex: 1;
+}
+
+/* Columna centrada en escritorio (trabajadores con foto grande) */
+.booking-option--stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.booking-option--stack .booking-option-icon {
+  width: 80px;
+  height: 80px;
+}
+
+@media (max-width: 640px) {
+  .booking-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
+  }
+  /* Móvil: también en fila para que quepan más opciones por pantalla */
+  .booking-option--stack {
+    flex-direction: row;
+    text-align: left;
+    gap: var(--space-md);
+  }
+  .booking-option--stack .avatar-xl,
+  .booking-option--stack .booking-option-icon {
+    width: 56px;
+    height: 56px;
+    font-size: var(--font-size-lg);
+  }
 }
 
 .booking-summary {
@@ -1421,6 +1938,10 @@ img {
   border-radius: var(--radius-card);
   padding: var(--card-padding);
   margin-bottom: var(--space-lg);
+}
+
+.booking-summary--compact {
+  margin-bottom: var(--space-md);
 }
 
 .booking-summary .summary-row {
@@ -1452,6 +1973,26 @@ img {
   flex-wrap: wrap;            /* «Atrás» + «Confirmar…» nunca desbordan en móvil */
   gap: var(--space-sm);
   margin-top: var(--space-lg);
+}
+
+/* Móvil: la barra Atrás/Continuar queda fija abajo — con 9 servicios el CTA
+   estaba a varios scrolls de distancia. El primario ocupa el ancho sobrante. */
+@media (max-width: 640px) {
+  .booking-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 50;
+    flex-wrap: nowrap;
+    margin: var(--space-lg) calc(-1 * var(--space-md)) 0;
+    padding: var(--space-sm) var(--space-md) calc(var(--space-sm) + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-top: 1px solid var(--border);
+  }
+  .booking-actions .btn-primary {
+    flex: 1 1 auto;
+  }
 }
 
 /* Time slots */
@@ -1548,6 +2089,55 @@ img {
   color: var(--muted);
 }
 
+/* Barra de la semana: rango + navegación + acciones */
+.week-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.week-range {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Móvil: rango a ancho completo y botones repartidos en filas iguales */
+@media (max-width: 640px) {
+  /* Barras de herramientas en la cabecera (semana, rango de fechas): fila propia */
+  .page-header-actions:has(.week-toolbar, .filters-bar) {
+    width: 100%;
+  }
+  .page-header-actions .filters-bar > * {
+    flex: 1 1 0;
+  }
+  .week-range {
+    flex: 1 1 100%;
+  }
+  .week-toolbar .btn {
+    flex: 1 1 auto;
+  }
+}
+
+.section-subtitle {
+  font-size: var(--font-size-lg);
+  margin: var(--space-lg) 0 var(--space-xs);
+  text-transform: capitalize;
+}
+
+.worker-totals {
+  margin-top: var(--space-xl);
+}
+
+/* Móvil: los 3 contadores en una fila; los ingresos a ancho completo */
+@media (max-width: 640px) {
+  .worker-totals .stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 /* Reservation cards */
 .reservation-list {
   display: flex;
@@ -1570,6 +2160,49 @@ img {
 
 .reservation-card:hover {
   box-shadow: var(--shadow-sm);
+}
+
+.reservation-card--clickable {
+  cursor: pointer;
+}
+
+.reservation-card--clickable:hover {
+  border-color: var(--accent-border);
+}
+
+.reservation-card--clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Página de contenido estrecho (Mis citas, legales) */
+.narrow-page {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.page-lead {
+  text-align: center;
+  color: var(--muted);
+  margin: 0 auto var(--space-lg);
+  max-width: 52ch;
+}
+
+.form-card {
+  padding: var(--card-padding);
+  margin-bottom: var(--space-lg);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.horario-horas--form {
+  margin-bottom: var(--space-md);
+}
+
+.booking-option .avatar {
+  flex: none;
 }
 
 .reservation-card .res-time {
@@ -1678,9 +2311,39 @@ img {
    ============================================================ */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  /* auto-fit: las columnas vacías colapsan → 5 KPIs en una fila, sin huérfanos */
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: var(--space-md);
   margin-bottom: var(--space-xl);
+}
+
+/* Subtítulo de grupo de KPIs (Reservas / Ingresos / Tasas) */
+.stats-group-title {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caption);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stats-grid--tight {
+  margin-bottom: var(--space-lg);
+}
+
+/* Móvil: KPIs en 2 columnas (antes 1 por fila → 9 tarjetas de alto) */
+@media (max-width: 640px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-sm);
+  }
+  .stat-card {
+    padding: var(--space-md) 14px;
+  }
+  /* La tarjeta con desglose VISA/efectivo ocupa la fila completa */
+  .stat-card--wide {
+    grid-column: 1 / -1;
+  }
 }
 
 .stat-card {
@@ -1706,10 +2369,9 @@ img {
   color: var(--text);
 }
 
-.stat-card .stat-value.accent { color: var(--accent); }
-.stat-card .stat-value.success { color: var(--success); }
-.stat-card .stat-value.warning { color: var(--warning); }
-.stat-card .stat-value.danger { color: var(--danger); }
+/* Las cifras siempre en tinta (dataviz: el texto lleva tokens de texto, no de
+   estado; el rojo de «Canceladas» y el gris de «No shows» parecían error y
+   deshabilitado). Las clases se mantienen por compatibilidad, sin color. */
 
 /* Móvil pequeño: cifras de ingresos (€) a 24px para que nunca desborden */
 @media (max-width: 480px) {
@@ -1729,52 +2391,70 @@ img {
 }
 
 /* Bar chart (top services) */
+/* Barras horizontales ordenadas, un solo tono (dataviz: magnitud → secuencial).
+   Rejilla compartida: todas las pistas empiezan en la misma x (antes cada
+   etiqueta empujaba su barra y no se podían comparar longitudes). */
 .bar-chart {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(80px, 1fr) max-content;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .bar-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+  display: contents;
 }
 
 .bar-row .bar-label {
-  min-width: 140px;
   font-size: var(--font-size-sm);
-  text-align: right;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.bar-row .bar-track,
+.bar-row .bar-fill {
+  display: block;
 }
 
 .bar-row .bar-track {
-  flex: 1;
-  height: 24px;
+  height: 12px;
   background: var(--social-bg);
-  border-radius: var(--radius-sm);
+  border-radius: 0 4px 4px 0;
   overflow: hidden;
 }
 
 .bar-row .bar-fill {
   height: 100%;
+  min-width: 2px;
   background: var(--accent);   /* barra sólida en tinta */
-  border-radius: var(--radius-sm);
+  border-radius: 0 4px 4px 0;  /* extremo de dato redondeado, anclado a la base */
   transition: width var(--transition);
 }
 
 .bar-row .bar-value {
-  min-width: 80px;
   font-size: var(--font-size-sm);
   font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
 }
 
-/* Móvil: menos ancho mínimo para etiqueta y valor → la barra aún cabe */
+.bar-row .bar-value small {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* Móvil: etiqueta encima y barra + valor debajo (las 3 columnas no caben) */
 @media (max-width: 640px) {
-  .bar-row .bar-label {
-    min-width: 90px;
+  .bar-chart {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    row-gap: var(--space-xs);
   }
-  .bar-row .bar-value {
-    min-width: 64px;
+  .bar-row .bar-label {
+    grid-column: 1 / -1;
+    margin-top: var(--space-sm);
   }
 }
 
@@ -1791,6 +2471,18 @@ img {
 .filters-bar .form-select {
   width: auto;
   min-width: 160px;
+}
+
+/* Input/Select/DatePicker envuelven en .form-group: dentro de la barra el
+   espaciado lo da el gap, no el margin inferior (antes huecos dobles) */
+.filters-bar .form-group {
+  margin-bottom: 0;
+}
+
+/* Filtros con etiqueta visible (Desde/Hasta): alineados por la base */
+.filters-bar--labelled {
+  align-items: flex-end;
+  margin-bottom: 0;
 }
 
 /* Móvil: cada filtro ocupa su fila completa (fecha, estado, búsqueda…) */
@@ -1817,6 +2509,13 @@ img {
 }
 
 .pagination button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 36px;
+  justify-content: center;
+  font-family: inherit;
+  color: var(--text);
   padding: 6px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
@@ -1844,6 +2543,13 @@ img {
 .pagination button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .pagination button {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 /* ============================================================
@@ -2590,6 +3296,291 @@ html {
   font-size: var(--font-size-xs);
   color: var(--muted);
 }
+
+/* ============================================================
+   UTILIDADES Y PIEZAS COMUNES (antes estilos en línea en páginas
+   y modales). Pocas y con tokens; al final del archivo para que, a
+   igual especificidad, ganen como lo hacía el `style` en línea.
+   ============================================================ */
+.text-center { text-align: center; }
+.text-sm { font-size: var(--font-size-sm); }
+.text-xs { font-size: var(--font-size-xs); }
+.m-0 { margin: 0; }
+.mt-0 { margin-top: 0; }
+.mt-xs { margin-top: var(--space-xs); }
+.mt-md { margin-top: var(--space-md); }
+
+/* Icono que precede a un texto en línea (contacto, estado del perfil…) */
+.icon-lead { margin-right: 6px; }
+
+/* Enlace que hereda el color del texto que lo rodea (datos de contacto) */
+.link-inherit { color: inherit; }
+
+/* Fila de botones de un formulario dentro de la página (Perfil) */
+.form-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+/* Dos campos en paralelo dentro de un modal (inicio/fin de la oferta) */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+/* Vista previa de foto subida en formularios (perfil, trabajadores,
+   servicios, resultados) + botón «Quitar» */
+.photo-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.photo-preview__img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+/* Servicios: foto completa sin recortar (se muestra así en la portada) */
+.photo-preview__img--contain {
+  width: auto;
+  height: 140px;
+  max-width: 240px;
+  object-fit: contain;
+  background: var(--social-bg);
+  border-radius: var(--radius-md);
+  padding: var(--space-xs);
+}
+
+/* Estrellas monocromas (portada y tabla de reseñas) */
+.stars {
+  display: inline-flex;
+  gap: 2px;
+  color: var(--text);
+}
+
+/* Perfil del trabajador: card con más aire que la de contenido */
+.profile-card {
+  padding: var(--space-lg);
+}
+
+/* ---------- Portada: tarjetas de servicio / equipo / reseña ---------- */
+.landing-card {
+  padding: var(--card-padding);
+  text-align: center;
+}
+
+.landing-card--quote {
+  margin: 0;
+  text-align: left;
+}
+
+.landing-card__img {
+  width: 100%;
+  height: 150px;
+  display: block;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-sm);
+}
+
+.landing-card__name { margin-bottom: var(--space-xs); }
+
+.landing-card__price {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--accent);
+  margin: var(--space-sm) 0 var(--space-xs);
+}
+
+.reviews-summary {
+  text-align: center;
+  margin-bottom: var(--space-md);
+}
+
+.reviews-summary__score {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+}
+
+.review-quote {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--font-size-sm);
+}
+
+.review-author {
+  font-size: var(--font-size-xs);
+  color: var(--muted);
+}
+
+.review-author b { color: var(--text); }
+
+.reviews-cta {
+  text-align: center;
+  margin-top: var(--space-xl);
+}
+
+.landing-contact__cta { margin-top: 12px; }
+
+/* Desplazamiento máximo (px) de cada decoración del parallax del hero */
+.hero-deco--scissors { --dx: -45; --dy: -28; }
+.hero-deco--sparkles { --dx: 65; --dy: -40; }
+.hero-deco--brush { --dx: -110; --dy: 55; }
+.hero-deco--spark1 { --dx: -25; }
+.hero-deco--spark2 { --dx: 40; }
+.hero-deco--spark3 { --dx: -10; }
+.hero-deco--spark4 { --dx: 55; }
+
+/* ---------- Páginas legales ---------- */
+.legal-page {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.legal-table th,
+.legal-table td {
+  padding: 8px 4px;
+}
+
+.legal-table thead tr {
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.legal-table tbody tr:not(:last-child) {
+  border-bottom: 1px solid var(--border);
+}
+
+/* ---------- Reserva confirmada (recibo) ---------- */
+.booking-success {
+  text-align: center;
+}
+
+.booking-success__icon {
+  font-size: var(--font-size-3xl);
+  margin-bottom: var(--space-sm);
+}
+
+.booking-success__title { font-size: var(--font-size-2xl); }
+
+.booking-success .booking-summary {
+  text-align: left;
+  max-width: 480px;
+  margin: var(--space-lg) auto;
+}
+
+/* Token de cancelación: monoespaciado y partible para no desbordar */
+.token-text {
+  font-size: var(--font-size-xs);
+  word-break: break-all;
+  font-family: monospace;
+}
+
+/* Aviso «sin email». Antes usaba var(--surface, #f8fafc), token inexistente:
+   en oscuro quedaba un recuadro claro; surface-alt es el equivalente real. */
+.booking-success__notice {
+  max-width: 480px;
+  margin: 0 auto var(--space-md);
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--muted);
+  font-size: var(--font-size-sm);
+  text-align: left;
+}
+
+.booking-success__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-md);
+}
+
+.booking-success__actions--end {
+  margin: var(--space-lg) 0 0;
+}
+
+.booking-success__note {
+  font-size: var(--font-size-sm);
+  color: var(--muted);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.text-xl { font-size: var(--font-size-xl); }
+.mb-md { margin-bottom: var(--space-md); }
+.break-all { word-break: break-all; }
+
+/* Icono que sigue a un texto en línea (✕ de hueco ocupado) */
+.icon-trail { margin-left: var(--space-xs); }
+
+/* Icono + texto alineados («Consultando disponibilidad…», marca del panel) */
+.inline-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.inline-row--inline { display: inline-flex; }
+
+/* Pareja de botones compactos (anterior/siguiente mes en Cierres) */
+.btn-pair {
+  display: inline-flex;
+  gap: 6px;
+}
+
+/* Lista de avisos dentro de .error-state (Horarios) */
+.notice-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+/* Honeypot anti-bot del login: fuera de pantalla, NO display:none (algunos
+   bots lo detectan) */
+.honeypot {
+  position: absolute;
+  left: -5000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Precio tachado + precio de oferta (+ badge de descuento) */
+.price-with-offer {
+  display: inline-flex;
+  gap: var(--space-xs);
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.price-with-offer s {
+  opacity: 0.55;
+  font-weight: 400;
+}
+
+/* Marca textual de respaldo cuando no carga ninguna imagen del logo */
+.brand-logo--text {
+  font-weight: 600;
+  gap: var(--space-sm);
+}
+
+.skeleton-text--short { width: 60%; }
+.skeleton--slot { height: 40px; }
+
+.contact-map__frame { border: 0; }
 
 /* ---------- 404 ---------- */
 .not-found {

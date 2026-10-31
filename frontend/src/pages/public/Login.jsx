@@ -102,7 +102,7 @@ export default function Login() {
         aria-label="Formulario de inicio de sesión"
       >
         <h2>Iniciar sesión</h2>
-        <p style={{ color: 'var(--muted)', marginTop: 0 }}>
+        <p className="muted-text mt-0">
           Accede al panel de trabajadores
         </p>
 
@@ -137,9 +137,9 @@ export default function Login() {
           />
         </div>
 
-        <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="form-group form-check">
           <input type="checkbox" id="rememberMe" {...register('rememberMe')} />
-          <label htmlFor="rememberMe" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--muted)' }}>
+          <label htmlFor="rememberMe" className="muted-text">
             Recordarme
           </label>
         </div>
@@ -154,7 +154,7 @@ export default function Login() {
         */}
         <div
           aria-hidden="true"
-          style={{ position: 'absolute', left: '-5000px', top: 'auto', width: '1px', height: '1px', overflow: 'hidden' }}
+          className="honeypot"
         >
           <label htmlFor="website">Website</label>
           <input
@@ -181,12 +181,12 @@ export default function Login() {
         )}
 
         {serverError && (
-          <p className="form-error" role="alert" style={{ textAlign: 'center' }}>
+          <p className="form-error form-error--center" role="alert">
             {serverError}
           </p>
         )}
 
-        <Button type="submit" variant="primary" size="lg" loading={isSubmitting} style={{ width: '100%' }}>
+        <Button type="submit" variant="primary" size="lg" loading={isSubmitting} className="btn-block">
           {isSubmitting ? 'Iniciando sesión...' : 'Iniciar sesión'}
         </Button>
       </form>

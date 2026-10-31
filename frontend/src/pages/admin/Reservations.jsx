@@ -150,9 +150,11 @@ export default function AdminReservations() {
     {
       key: 'hora',
       label: 'Hora',
-      render: (row) => `${formatTime(row.horaInicio)} - ${formatTime(row.horaFin)}`,
+      render: (row) => (
+        <span className="nowrap">{formatTime(row.horaInicio)}–{formatTime(row.horaFin)}</span>
+      ),
     },
-    { key: 'cliente', label: 'Cliente', render: (row) => row.cliente?.nombre },
+    { key: 'cliente', label: 'Cliente', render: (row) => row.cliente?.nombre, mobile: 'title' },
     { key: 'telefono', label: 'Teléfono', render: (row) => row.cliente?.telefono },
     { key: 'trabajador', label: 'Trabajador', render: (row) => row.trabajador?.nombre || '—' },
     { key: 'servicio', label: 'Servicio', render: (row) => row.servicio?.nombre },
@@ -161,8 +163,7 @@ export default function AdminReservations() {
       label: 'Estado',
       render: (row) => (
         <select
-          className="form-select"
-          style={{ padding: '4px 8px', fontSize: 'var(--font-size-xs)' }}
+          className="form-select form-select--compact"
           value={row.estado}
           onChange={(e) => quickStatus(row, e.target.value)}
           aria-label={`Cambiar estado de reserva ${row.id}`}
@@ -220,6 +221,7 @@ export default function AdminReservations() {
           value={filters.fecha}
           onChange={(v) => { setFilters((f) => ({ ...f, fecha: v || '' })); setPage(1); }}
           placeholder="Fecha"
+          aria-label="Filtrar por fecha"
         />
         <Select
           value={filters.estado}
@@ -285,7 +287,7 @@ export default function AdminReservations() {
           </>
         }
       >
-        <div className="booking-summary" style={{ marginBottom: 16 }}>
+        <div className="booking-summary booking-summary--compact">
           <div className="summary-row">
             <span className="label">Cliente</span>
             <span className="value">

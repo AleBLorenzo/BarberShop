@@ -7,7 +7,7 @@ export function Label({ htmlFor, children, required }) {
   return (
     <label className="form-label" htmlFor={htmlFor}>
       {children}
-      {required && <span style={{ color: 'var(--danger)' }}> *</span>}
+      {required && <span className="required-mark" aria-hidden="true">*</span>}
     </label>
   );
 }
@@ -29,6 +29,7 @@ export const Input = forwardRef(function Input(
         ref={ref}
         className={`form-input ${error ? 'error' : ''} ${className}`}
         aria-invalid={error ? 'true' : undefined}
+        aria-required={required || undefined}
         {...rest}
       />
       {error && <p className="form-error" role="alert">{error}</p>}
@@ -53,6 +54,7 @@ export const Select = forwardRef(function Select(
         ref={ref}
         className={`form-select ${error ? 'error' : ''} ${className}`}
         aria-invalid={error ? 'true' : undefined}
+        aria-required={required || undefined}
         {...rest}
       >
         {children}
@@ -84,6 +86,7 @@ export const Textarea = forwardRef(function Textarea(
         ref={ref}
         className={`form-textarea ${error ? 'error' : ''} ${className}`}
         aria-invalid={error ? 'true' : undefined}
+        aria-required={required || undefined}
         {...rest}
       />
       {error && <p className="form-error" role="alert">{error}</p>}

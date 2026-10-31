@@ -48,15 +48,8 @@ export default function PriceWithOffer({
   }
 
   return (
-    <span
-      style={{
-        display: 'inline-flex',
-        gap: 'var(--space-xs)',
-        alignItems: 'baseline',
-        flexWrap: 'wrap',
-      }}
-    >
-      <s style={{ opacity: 0.55, fontWeight: 400 }}>{formatCurrency(precio)}</s>
+    <span className="price-with-offer">
+      <s>{formatCurrency(precio)}</s>
       <strong>{formatCurrency(precioOferta)}</strong>
       {descuentoPorcentaje != null && (
         <Badge variant="pending">-{descuentoPorcentaje}%</Badge>

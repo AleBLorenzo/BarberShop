@@ -11,8 +11,7 @@ export default function Skeleton({ variant = 'text', lines = 3, className = '' }
       {Array.from({ length: lines }).map((_, i) => (
         <div
           key={i}
-          className="skeleton skeleton-text"
-          style={{ width: i === lines - 1 ? '60%' : '100%' }}
+          className={`skeleton skeleton-text${i === lines - 1 ? ' skeleton-text--short' : ''}`}
         />
       ))}
     </div>

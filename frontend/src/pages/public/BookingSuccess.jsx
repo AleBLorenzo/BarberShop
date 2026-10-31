@@ -98,21 +98,18 @@ export default function BookingSuccess() {
   };
 
   return (
-    <div className="booking-wizard" style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: 'var(--font-size-3xl)', marginBottom: 8 }}>
+    <div className="booking-wizard booking-success">
+      <div className="booking-success__icon">
         <LuCircleCheck aria-hidden="true" />
       </div>
-      <h1 style={{ fontSize: 'var(--font-size-2xl)' }}>¡Reserva confirmada!</h1>
-      <p style={{ color: 'var(--muted)' }}>
+      <h1 className="booking-success__title">¡Reserva confirmada!</h1>
+      <p className="muted-text">
         Te esperamos el {fecha ? formatDate(fecha, 'EEEE dd/MM/yyyy') : ''} a las{' '}
         {formatTime(ini)}
       </p>
 
       {/* Recibo con todos los datos de la reserva */}
-      <div
-        className="booking-summary"
-        style={{ textAlign: 'left', maxWidth: 480, margin: '24px auto' }}
-      >
+      <div className="booking-summary">
         {row('Reserva nº', reserva.id)}
         {row('Cliente', reserva.clienteNombre)}
         {row('Teléfono', reserva.clienteTelefono)}
@@ -127,45 +124,19 @@ export default function BookingSuccess() {
         {token && (
           <div className="summary-row">
             <span className="label">Token de cancelación</span>
-            <span
-              className="value"
-              style={{ fontSize: 'var(--font-size-xs)', wordBreak: 'break-all', fontFamily: 'monospace' }}
-            >
-              {token}
-            </span>
+            <span className="value token-text">{token}</span>
           </div>
         )}
       </div>
 
       {sinEmail && (
-        <p
-          role="status"
-          style={{
-            maxWidth: 480,
-            margin: '0 auto 16px',
-            padding: '10px 14px',
-            borderRadius: 8,
-            border: '1px solid var(--border, #e5e7eb)',
-            background: 'var(--surface, #f8fafc)',
-            color: 'var(--muted)',
-            fontSize: 'var(--font-size-sm)',
-            textAlign: 'left',
-          }}
-        >
+        <p role="status" className="booking-success__notice">
           Sin email registrado: no se ha enviado confirmación por correo. Guarda
           o copia el token para gestionar tu cita.
         </p>
       )}
 
-      <div
-        style={{
-          display: 'flex',
-          gap: 12,
-          justifyContent: 'center',
-          flexWrap: 'wrap',
-          marginBottom: 16,
-        }}
-      >
+      <div className="booking-success__actions">
         <Button variant="primary" onClick={() => downloadReservaIcs(reserva)}>
           <LuCalendar aria-hidden="true" />
           Añadir a mi calendario
@@ -177,13 +148,13 @@ export default function BookingSuccess() {
         )}
       </div>
 
-      <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--muted)', maxWidth: 480, margin: '0 auto' }}>
+      <p className="booking-success__note">
         «Añadir a mi calendario» descarga un recordatorio con la cita y una
         alarma 30 minutos antes. Guarda el token para cancelar o reprogramar
         tu cita.
       </p>
 
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 24 }}>
+      <div className="booking-success__actions booking-success__actions--end">
         <Link to="/" className="btn btn-primary btn-md">Volver al inicio</Link>
         <Link to="/mis-citas" className="btn btn-secondary btn-md">Ver mis citas</Link>
       </div>

@@ -153,12 +153,12 @@ export default function AdminResultados() {
           src={mediaUrl(row.url)}
           alt={row.titulo || 'Trabajo'}
           loading="lazy"
-          style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 6, background: 'var(--border)' }}
+          className="table-thumb"
           onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
         />
       ),
     },
-    { key: 'titulo', label: 'Título', render: (row) => row.titulo || '—' },
+    { key: 'titulo', label: 'Título', render: (row) => row.titulo || '—', mobile: 'title' },
     {
       key: 'createdAt',
       label: 'Fecha',
@@ -168,7 +168,7 @@ export default function AdminResultados() {
       key: 'actions',
       label: 'Acciones',
       render: (row) => (
-        <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <span className="row-actions">
           <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
             Editar
           </Button>
@@ -235,10 +235,9 @@ export default function AdminResultados() {
             />
             <select
               id="url-carpeta"
-              className="form-select"
+              className="form-select mt-xs"
               value=""
               aria-label="…o elegir de la carpeta"
-              style={{ marginTop: 'var(--space-xs)' }}
               onChange={handleUrlCarpeta}
             >
               <option value="">…o elegir de la carpeta</option>
@@ -249,18 +248,11 @@ export default function AdminResultados() {
               ))}
             </select>
             {url && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-sm)',
-                  marginTop: 'var(--space-sm)',
-                }}
-              >
+              <div className="photo-preview">
                 <img
                   src={mediaUrl(url)}
                   alt="Vista previa de la foto"
-                  style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6 }}
+                  className="photo-preview__img"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
                 <Button
@@ -284,7 +276,7 @@ export default function AdminResultados() {
               })}
             />
           </div>
-          <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--muted)', margin: 0 }}>
+          <p className="muted-inline m-0">
             Se muestra en su color original en la portada. Si la imagen no carga,
             se reserva el hueco sin romper la cuadrícula.
           </p>

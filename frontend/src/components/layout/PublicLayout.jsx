@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
-import { Outlet, Link, NavLink } from 'react-router-dom';
+import { Outlet, Link, NavLink, useLocation } from 'react-router-dom';
 import Logo from '../ui/Logo';
 import RouteFallback from '../RouteFallback';
 import { NOMBRE, EMAIL_CONTACTO, DIRECCION, GOOGLE_MAPS_URL, INSTAGRAM_URL, TELEFONO } from '../../config/business';
@@ -61,6 +61,9 @@ export default function PublicLayout() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const { pathname } = useLocation();
+  const enReserva = pathname.startsWith('/reservar/');
+
   return (
     <div className="public-layout">
       <ScrollProgress />
@@ -79,24 +82,26 @@ export default function PublicLayout() {
             : undefined
         }
       >
-        <Link to="/" style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)', color: 'var(--accent)' }}>
+        <Link to="/" className="public-brand" aria-label="TheTankBarber — Inicio">
           <Logo />
         </Link>
+        {/* Estado activo por clase (.active + aria-current de NavLink): antes el
+            color activo e inactivo eran el mismo (#0a0a0a) y no se distinguía */}
         <nav className="public-nav" aria-label="Navegación principal">
-          <NavLink to="/" style={({ isActive }) => ({ color: isActive ? 'var(--accent)' : 'var(--text)' })}>
+          <NavLink to="/" end className="nav-link nav-home">
             Inicio
           </NavLink>
-          <NavLink to="/reservar/servicio" style={({ isActive }) => ({ color: isActive ? 'var(--accent)' : 'var(--text)' })}>
+          {/* Activo en los 4 pasos del asistente, no solo en /reservar/servicio */}
+          <NavLink
+            to="/reservar/servicio"
+            className={() => `nav-link ${enReserva ? 'active' : ''}`}
+          >
             Reservar
           </NavLink>
-          <NavLink to="/mis-citas" style={({ isActive }) => ({ color: isActive ? 'var(--accent)' : 'var(--text)' })}>
+          <NavLink to="/mis-citas" className="nav-link">
             Mis citas
           </NavLink>
-          <NavLink
-            to="/login"
-            className="btn btn-secondary btn-sm"
-            style={({ isActive }) => (isActive ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : undefined)}
-          >
+          <NavLink to="/login" className="btn btn-secondary btn-sm nav-cta">
             Área personal
           </NavLink>
         </nav>
@@ -112,7 +117,7 @@ export default function PublicLayout() {
 
       <footer className="public-footer">
         <p>{DIRECCION}</p>
-        <p style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <p className="footer-links">
           <a href={`mailto:${EMAIL_CONTACTO}`}>{EMAIL_CONTACTO}</a>
           <a href={`tel:${TELEFONO}`}>{TELEFONO}</a>
           <a href={GOOGLE_MAPS_URL} target="_blank" rel="noopener noreferrer">Google Maps</a>
@@ -130,7 +135,7 @@ export default function PublicLayout() {
         <p>
           © {new Date().getFullYear()} {NOMBRE} — Tu barbería de confianza
         </p>
-        <p style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', fontSize: 'var(--font-size-xs)' }}>
+        <p className="footer-links footer-links--legal">
           <Link to="/legal/privacidad">Política de privacidad</Link>
           <Link to="/legal/terminos">Términos y condiciones</Link>
           <Link to="/legal/cookies">Política de cookies</Link>

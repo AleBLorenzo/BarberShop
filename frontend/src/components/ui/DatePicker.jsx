@@ -30,7 +30,7 @@ export const DatePicker = forwardRef(function DatePicker(
       {label && (
         <label className="form-label" htmlFor={inputId}>
           {label}
-          {required && <span style={{ color: 'var(--danger)' }}> *</span>}
+          {required && <span className="required-mark" aria-hidden="true">*</span>}
         </label>
       )}
       <input
@@ -43,6 +43,7 @@ export const DatePicker = forwardRef(function DatePicker(
         min={min ? toInputValue(min) : undefined}
         max={max ? toInputValue(max) : undefined}
         aria-invalid={error ? 'true' : undefined}
+        aria-required={required || undefined}
         {...rest}
       />
       {error && <p className="form-error" role="alert">{error}</p>}

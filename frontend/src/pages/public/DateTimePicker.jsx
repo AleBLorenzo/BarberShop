@@ -101,7 +101,7 @@ export default function DateTimePicker() {
   return (
     <div>
       {navError && (
-        <div className="error-state" role="alert" style={{ marginBottom: 16 }}>
+        <div className="error-state mb-md" role="alert">
           <span>{navError}</span>
         </div>
       )}
@@ -139,7 +139,7 @@ export default function DateTimePicker() {
             Cerrado: ese día no se puede reservar. Elige otra fecha.
           </p>
         ) : loading && (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className="inline-row">
             <Spinner size="sm" /> Consultando disponibilidad...
           </div>
         )}

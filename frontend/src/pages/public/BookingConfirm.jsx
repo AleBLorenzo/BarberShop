@@ -206,7 +206,7 @@ export default function BookingConfirm() {
                 'Formato de email inválido',
             })}
           />
-          <small style={{ color: 'var(--muted)' }}>
+          <small className="muted-text">
             {clienteEmailValue?.trim()
               ? 'Te enviaremos la confirmación y el recordatorio por correo.'
               : 'Sin email no recibirás la confirmación por correo. Guarda el token de cancelación para gestionar tu cita.'}
@@ -214,7 +214,7 @@ export default function BookingConfirm() {
         </div>
 
         {serverError && (
-          <p className="form-error" role="alert" style={{ textAlign: 'center' }}>
+          <p className="form-error form-error--center" role="alert">
             {serverError}
           </p>
         )}

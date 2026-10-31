@@ -169,7 +169,7 @@ export default function AdminServices() {
   };
 
   const columns = [
-    { key: 'nombre', label: 'Nombre' },
+    { key: 'nombre', label: 'Nombre', mobile: 'title' },
     {
       key: 'foto',
       label: 'Foto',
@@ -179,16 +179,10 @@ export default function AdminServices() {
             src={mediaUrl(row.foto)}
             alt={row.nombre}
             loading="lazy"
-            style={{
-              width: 56,
-              height: 56,
-              objectFit: 'cover',
-              borderRadius: 'var(--radius-sm)',
-              background: 'var(--border)',
-            }}
+            className="table-thumb"
             onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
-        ) : '—'
+        ) : <span className="cell-empty">—</span>
       ),
     },
     { key: 'duracionMinutos', label: 'Duración', render: (row) => `${row.duracionMinutos} min` },
@@ -197,9 +191,9 @@ export default function AdminServices() {
       label: 'Precio',
       render: (row) => (
         row.descuentoPorcentaje != null ? (
-          <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+          <span className="price-offer">
             {row.ofertaActiva && (
-              <s style={{ opacity: 0.6 }}>{formatCurrency(row.precio)}</s>
+              <s>{formatCurrency(row.precio)}</s>
             )}
             <strong>{row.ofertaActiva ? formatCurrency(row.precioOferta) : formatCurrency(row.precio)}</strong>
             <Badge variant={row.ofertaActiva ? 'pending' : 'default'}>
@@ -222,7 +216,7 @@ export default function AdminServices() {
       key: 'actions',
       label: 'Acciones',
       render: (row) => (
-        <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <span className="row-actions">
           <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
             Editar
           </Button>
@@ -320,10 +314,7 @@ export default function AdminServices() {
               })}
             />
           </div>
-          <div
-            className="form-group"
-            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}
-          >
+          <div className="form-group form-grid-2">
             <div>
               <Label htmlFor="ofertaInicio">Inicio de la oferta</Label>
               <Input
@@ -368,10 +359,9 @@ export default function AdminServices() {
             />
             <select
               id="foto-carpeta"
-              className="form-select"
+              className="form-select mt-xs"
               value=""
               aria-label="…o elegir de la carpeta"
-              style={{ marginTop: 'var(--space-xs)' }}
               onChange={handleFotoCarpeta}
             >
               <option value="">…o elegir de la carpeta</option>
@@ -382,25 +372,11 @@ export default function AdminServices() {
               ))}
             </select>
             {foto && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-sm)',
-                  marginTop: 'var(--space-sm)',
-                }}
-              >
+              <div className="photo-preview">
                 <img
                   src={mediaUrl(foto)}
                   alt="Vista previa de la foto"
-                  style={{
-                    height: 140,
-                    maxWidth: 240,
-                    objectFit: 'contain',   /* foto completa, sin recortar */
-                    background: 'var(--social-bg)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: 'var(--space-xs)',
-                  }}
+                  className="photo-preview__img photo-preview__img--contain"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
                 <Button size="sm" variant="ghost" onClick={() => setValue('foto', '')}>
@@ -409,7 +385,7 @@ export default function AdminServices() {
               </div>
             )}
           </div>
-          <div className="form-group" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className="form-group form-check">
             <input type="checkbox" id="activo" {...register('activo')} />
             <label htmlFor="activo">Activo</label>
           </div>

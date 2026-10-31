@@ -18,10 +18,7 @@ const PAGE_SIZE = 10;
 function Estrellas({ puntuacion }) {
   const llenas = Math.round(puntuacion);
   return (
-    <span
-      aria-label={`${llenas} de 5 estrellas`}
-      style={{ color: 'var(--text)', display: 'inline-flex', gap: 2 }}
-    >
+    <span className="stars" aria-label={`${llenas} de 5 estrellas`}>
       {Array.from({ length: 5 }, (_, i) => (
         <LuStar key={i} aria-hidden="true" fill={i < llenas ? 'currentColor' : 'none'} />
       ))}
@@ -118,13 +115,13 @@ export default function AdminResenas() {
   };
 
   const columns = [
-    { key: 'autor', label: 'Autor' },
+    { key: 'autor', label: 'Autor', mobile: 'title' },
     { key: 'puntuacion', label: 'Puntuación', render: (row) => <Estrellas puntuacion={row.puntuacion} /> },
     {
       key: 'texto',
       label: 'Reseña',
       render: (row) => (
-        <span style={{ display: 'block', maxWidth: 360 }}>
+        <span className="cell-text-clamp">
           {row.texto.length > 110 ? `${row.texto.slice(0, 110)}…` : row.texto}
         </span>
       ),
@@ -138,7 +135,7 @@ export default function AdminResenas() {
       key: 'actions',
       label: 'Acciones',
       render: (row) => (
-        <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <span className="row-actions">
           <Button size="sm" variant="secondary" onClick={() => openEdit(row)}>
             Editar
           </Button>

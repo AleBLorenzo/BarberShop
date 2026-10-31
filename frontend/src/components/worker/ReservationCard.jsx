@@ -62,7 +62,7 @@ export default function ReservationCard({ reserva, onAction, actionLoading }) {
       <div className="res-client">
         <div className="name">{reserva.cliente?.nombre}</div>
         <div className="detail">
-          <LuPhone aria-hidden="true" style={{ marginRight: 6 }} />
+          <LuPhone aria-hidden="true" className="icon-lead" />
           {reserva.cliente?.telefono} · {reserva.servicio?.nombre}
         </div>
       </div>
@@ -131,12 +131,12 @@ export default function ReservationCard({ reserva, onAction, actionLoading }) {
         </p>
         <div className="form-group">
           <span className="form-label" id="pago-label">
-            Método de pago<span style={{ color: 'var(--danger)' }}> *</span>
+            Método de pago<span className="required-mark" aria-hidden="true">*</span>
           </span>
           <div
             role="group"
             aria-labelledby="pago-label"
-            style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}
+            className="row-actions"
           >
             {PAGO_METHODS.map((metodo) => (
               <Button

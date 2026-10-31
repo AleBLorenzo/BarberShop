@@ -47,6 +47,8 @@ function useReveal(deps) {
 }
 
 /** Delay de stagger por índice (ms), con tope para no alargar la fila. */
+// Único estilo en línea que queda en la portada: es dinámico (depende del
+// índice de la tarjeta), por eso no puede vivir en App.css.
 const revealDelay = (i, step = 140, cap = 5) => ({
   '--reveal-delay': `${Math.min(i, cap) * step}ms`,
 });
@@ -67,10 +69,7 @@ const onHeroLeave = (e) => {
 function Estrellas({ puntuacion }) {
   const llenas = Math.round(puntuacion);
   return (
-    <span
-      aria-label={`${llenas} de 5 estrellas`}
-      style={{ color: 'var(--text)', display: 'inline-flex', gap: 2 }}
-    >
+    <span className="stars" aria-label={`${llenas} de 5 estrellas`}>
       {Array.from({ length: 5 }, (_, i) => (
         <LuStar key={i} aria-hidden="true" fill={i < llenas ? 'currentColor' : 'none'} />
       ))}
@@ -168,25 +167,25 @@ export default function Landing() {
         onMouseLeave={onHeroLeave}
       >
         {/* Decoración de fondos: loops infinitos + parallax (solo visual) */}
-        <span className="hero-deco hero-deco--scissors" style={{ '--dx': '-45', '--dy': '-28' }} aria-hidden="true">
+        <span className="hero-deco hero-deco--scissors" aria-hidden="true">
           <LuScissors />
         </span>
-        <span className="hero-deco hero-deco--sparkles" style={{ '--dx': '65', '--dy': '-40' }} aria-hidden="true">
+        <span className="hero-deco hero-deco--sparkles" aria-hidden="true">
           <LuSparkles />
         </span>
-        <span className="hero-deco hero-deco--brush" style={{ '--dx': '-110', '--dy': '55' }} aria-hidden="true">
+        <span className="hero-deco hero-deco--brush" aria-hidden="true">
           <LuBrush />
         </span>
-        <span className="hero-deco hero-deco--spark hero-deco--spark1" style={{ '--dx': '-25' }} aria-hidden="true">
+        <span className="hero-deco hero-deco--spark hero-deco--spark1" aria-hidden="true">
           <LuSparkles />
         </span>
-        <span className="hero-deco hero-deco--spark hero-deco--spark2" style={{ '--dx': '40' }} aria-hidden="true">
+        <span className="hero-deco hero-deco--spark hero-deco--spark2" aria-hidden="true">
           <LuSparkles />
         </span>
-        <span className="hero-deco hero-deco--spark hero-deco--spark3" style={{ '--dx': '-10' }} aria-hidden="true">
+        <span className="hero-deco hero-deco--spark hero-deco--spark3" aria-hidden="true">
           <LuSparkles />
         </span>
-        <span className="hero-deco hero-deco--spark hero-deco--spark4" style={{ '--dx': '55' }} aria-hidden="true">
+        <span className="hero-deco hero-deco--spark hero-deco--spark4" aria-hidden="true">
           <LuSparkles />
         </span>
         <h1>
@@ -222,26 +221,19 @@ export default function Landing() {
         ) : (
           <div className="grid-services">
             {servicios.map((serv, idx) => (
-              <div key={serv.id} className="card" data-reveal style={{ padding: 'var(--card-padding)', textAlign: 'center', ...revealDelay(idx) }}>
+              <div key={serv.id} className="card landing-card" data-reveal style={revealDelay(idx)}>
                 {serv.foto && (
                   <img
                     src={mediaUrl(serv.foto)}
                     alt={serv.nombre}
                     loading="lazy"
-                    style={{
-                      width: '100%',
-                      height: 150,
-                      display: 'block',
-                      objectFit: 'cover',
-                      borderRadius: 'var(--radius-md)',
-                      marginBottom: 8,
-                    }}
+                    className="landing-card__img"
                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   />
                 )}
-                <h3 style={{ marginTop: 0 }}>{serv.nombre}</h3>
-                {serv.descripcion && <p style={{ color: 'var(--muted)', fontSize: 'var(--font-size-sm)' }}>{serv.descripcion}</p>}
-                <p style={{ fontSize: 'var(--font-size-xl)', fontWeight: 600, color: 'var(--accent)', margin: '8px 0 4px' }}>
+                <h3 className="mt-0">{serv.nombre}</h3>
+                {serv.descripcion && <p className="muted-text text-sm">{serv.descripcion}</p>}
+                <p className="landing-card__price">
                   <PriceWithOffer
                     precio={serv.precio}
                     precioOferta={serv.precioOferta}
@@ -251,13 +243,13 @@ export default function Landing() {
                     ofertaFin={serv.ofertaFin}
                   />
                 </p>
-                <p style={{ color: 'var(--muted)', fontSize: 'var(--font-size-sm)', margin: 0 }}>
+                <p className="muted-text text-sm m-0">
                   {serv.duracionMinutos} min
                 </p>
               </div>
             ))}
             {!loading && servicios.length === 0 && !error && (
-              <p style={{ color: 'var(--muted)' }}>No hay servicios disponibles.</p>
+              <p className="muted-text">No hay servicios disponibles.</p>
             )}
           </div>
         )}
@@ -271,16 +263,16 @@ export default function Landing() {
         ) : (
           <div className="grid-workers">
             {trabajadores.map((trab, idx) => (
-              <div key={trab.id} className="card" data-reveal style={{ padding: 'var(--card-padding)', textAlign: 'center', ...revealDelay(idx) }}>
+              <div key={trab.id} className="card landing-card" data-reveal style={revealDelay(idx)}>
                 <Avatar src={mediaUrl(trab.foto)} name={trab.nombre} size="xl" />
-                <h3 style={{ marginBottom: 4 }}>{trab.nombre}</h3>
-                <p style={{ color: 'var(--muted)', fontSize: 'var(--font-size-sm)' }}>
+                <h3 className="landing-card__name">{trab.nombre}</h3>
+                <p className="muted-text text-sm">
                   {trab.especialidad || 'Barbero profesional'}
                 </p>
               </div>
             ))}
             {!loading && trabajadores.length === 0 && !error && (
-              <p style={{ color: 'var(--muted)' }}>Nuestro equipo se está formando.</p>
+              <p className="muted-text">Nuestro equipo se está formando.</p>
             )}
           </div>
         )}
@@ -290,7 +282,7 @@ export default function Landing() {
       <section aria-labelledby="resultados-title">
         <h2 id="resultados-title" className="section-title" data-reveal>Nuestros resultados</h2>
         {resultados.length === 0 ? (
-          <p style={{ color: 'var(--muted)', textAlign: 'center' }}>
+          <p className="muted-text text-center">
             Pronto verás aquí nuestros trabajos.
           </p>
         ) : (
@@ -317,34 +309,34 @@ export default function Landing() {
       <section aria-labelledby="resenas-title">
         <h2 id="resenas-title" className="section-title" data-reveal>Lo que dicen nuestros clientes</h2>
         {resenas.length > 0 && (
-          <div data-reveal style={{ textAlign: 'center', marginBottom: 'var(--space-md)' }}>
-            <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: 600 }}>
+          <div className="reviews-summary" data-reveal>
+            <div className="reviews-summary__score">
               {mediaResenas.toFixed(1)} <Estrellas puntuacion={mediaResenas} />
             </div>
-            <p style={{ color: 'var(--muted)', fontSize: 'var(--font-size-sm)', margin: 0 }}>
+            <p className="muted-text text-sm m-0">
               {resenas.length} {resenas.length === 1 ? 'reseña' : 'reseñas'}
             </p>
           </div>
         )}
         {resenas.length === 0 ? (
-          <p style={{ color: 'var(--muted)', textAlign: 'center' }}>
+          <p className="muted-text text-center">
             Aún no hay reseñas. ¡Sé el primero en contarnos tu experiencia!
           </p>
         ) : (
           <div className="grid-workers">
             {resenas.slice(0, 6).map((rev, idx) => (
-              <figure key={rev.id} className="card" data-reveal style={{ padding: 'var(--card-padding)', margin: 0, textAlign: 'left', ...revealDelay(idx) }}>
-                <blockquote style={{ margin: '0 0 8px', fontSize: 'var(--font-size-sm)' }}>
+              <figure key={rev.id} className="card landing-card landing-card--quote" data-reveal style={revealDelay(idx)}>
+                <blockquote className="review-quote">
                   «{rev.texto}»
                 </blockquote>
-                <figcaption style={{ fontSize: 'var(--font-size-xs)', color: 'var(--muted)' }}>
-                  <b style={{ color: 'var(--text)' }}>{rev.autor}</b> · <Estrellas puntuacion={rev.puntuacion} />
+                <figcaption className="review-author">
+                  <b>{rev.autor}</b> · <Estrellas puntuacion={rev.puntuacion} />
                 </figcaption>
               </figure>
             ))}
           </div>
         )}
-        <div data-reveal style={{ textAlign: 'center', marginTop: 'var(--space-xl)' }}>
+        <div className="reviews-cta" data-reveal>
           <a
             href={GOOGLE_MAPS_URL}
             target="_blank"
@@ -371,27 +363,27 @@ export default function Landing() {
       <section className="landing-contact" data-reveal>
         <h3>Visítanos</h3>
         <p>
-          <LuMapPin aria-hidden="true" style={{ marginRight: 6 }} />
-          <a href={GOOGLE_MAPS_URL} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
+          <LuMapPin aria-hidden="true" className="icon-lead" />
+          <a href={GOOGLE_MAPS_URL} target="_blank" rel="noopener noreferrer" className="link-inherit">
             {DIRECCION}
           </a>
         </p>
         <p>
-          <LuPhone aria-hidden="true" style={{ marginRight: 6 }} />
-          <a href={`tel:${TELEFONO}`} style={{ color: 'inherit' }}>{TELEFONO}</a>
+          <LuPhone aria-hidden="true" className="icon-lead" />
+          <a href={`tel:${TELEFONO}`} className="link-inherit">{TELEFONO}</a>
         </p>
         <p>
-          <LuMail aria-hidden="true" style={{ marginRight: 6 }} />
-          <a href={`mailto:${EMAIL_CONTACTO}`} style={{ color: 'inherit' }}>{EMAIL_CONTACTO}</a>
+          <LuMail aria-hidden="true" className="icon-lead" />
+          <a href={`mailto:${EMAIL_CONTACTO}`} className="link-inherit">{EMAIL_CONTACTO}</a>
         </p>
         {INSTAGRAM_URL && (
           <p>
-            <LuInstagram aria-hidden="true" style={{ marginRight: 6 }} />
+            <LuInstagram aria-hidden="true" className="icon-lead" />
             <a
               href={INSTAGRAM_URL}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: 'inherit' }}
+              className="link-inherit"
               aria-label="Instagram de TheTankBarber (@the_tank_barber)"
             >
               @the_tank_barber
@@ -399,7 +391,7 @@ export default function Landing() {
           </p>
         )}
         <p>
-          <LuClock aria-hidden="true" style={{ marginRight: 6 }} />
+          <LuClock aria-hidden="true" className="icon-lead" />
           {horarioLineas
             ? horarioLineas.map((linea, i) => (
               <span key={linea}>
@@ -412,7 +404,7 @@ export default function Landing() {
         {/* Mapa embebido (fachada clic-para-cargar); el enlace externo de la
             dirección se conserva arriba como vía para las indicaciones. */}
         <ContactMap />
-        <Link to="/mis-citas" className="btn btn-secondary" style={{ marginTop: 12 }}>
+        <Link to="/mis-citas" className="btn btn-secondary landing-contact__cta">
           Consultar mis citas
         </Link>
       </section>

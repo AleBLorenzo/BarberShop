@@ -120,8 +120,8 @@ export default function Reschedule() {
 
   return (
     <div className="booking-wizard">
-      <h1 style={{ textAlign: 'center', fontSize: 'var(--font-size-xl)' }}>Reprogramar cita</h1>
-      <p style={{ textAlign: 'center', color: 'var(--muted)' }}>
+      <h1 className="text-center text-xl">Reprogramar cita</h1>
+      <p className="muted-text text-center">
         Elige una nueva fecha y horario disponibles.
       </p>
 

@@ -14,6 +14,9 @@ import { LuScissors } from 'react-icons/lu';
 import Landing from '../pages/public/Landing';
 import Login from '../pages/public/Login';
 import NotFound from '../pages/public/NotFound';
+// Título + indicador de pasos del asistente de reserva (antes existía pero no
+// estaba enlazado: los pasos no mostraban ni título ni progreso).
+import BookingLayout from '../components/booking/BookingLayout';
 
 const ServiceSelector = lazy(() => import('../pages/public/ServiceSelector'));
 const WorkerSelector = lazy(() => import('../pages/public/WorkerSelector'));
@@ -72,10 +75,12 @@ export default function AppRoutes() {
         <Route element={<PublicLayout />}>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/reservar/servicio" element={<ServiceSelector />} />
-          <Route path="/reservar/trabajador" element={<WorkerSelector />} />
-          <Route path="/reservar/fecha-hora" element={<DateTimePicker />} />
-          <Route path="/reservar/confirmar" element={<BookingConfirm />} />
+          <Route element={<BookingLayout />}>
+            <Route path="/reservar/servicio" element={<ServiceSelector />} />
+            <Route path="/reservar/trabajador" element={<WorkerSelector />} />
+            <Route path="/reservar/fecha-hora" element={<DateTimePicker />} />
+            <Route path="/reservar/confirmar" element={<BookingConfirm />} />
+          </Route>
           <Route path="/reservar/exito" element={<BookingSuccess />} />
           <Route path="/mis-citas" element={<MyAppointments />} />
           <Route path="/reprogramar/:token" element={<Reschedule />} />
@@ -118,7 +123,7 @@ export default function AppRoutes() {
             <ProtectedRoute role="ADMIN">
               <DashLayout
                 brand={
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+                  <span className="inline-row inline-row--inline">
                     <LuScissors aria-hidden="true" />
                     Admin
                   </span>

@@ -9,7 +9,7 @@ export default function Cookies() {
   });
 
   return (
-    <article style={{ maxWidth: 760, margin: '0 auto' }}>
+    <article className="legal-page">
       <h1>Política de cookies</h1>
       <p>
         <b>Esta web no usa cookies propias</b>. Cuando decimos «no usar cookies» nos
@@ -31,41 +31,41 @@ export default function Cookies() {
 
       <h2>Almacenamiento que utilizamos</h2>
       <div className="table-wrapper">
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table className="legal-table">
         <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-            <th style={{ padding: '8px 4px' }}>Clave</th>
-            <th style={{ padding: '8px 4px' }}>Tipo</th>
-            <th style={{ padding: '8px 4px' }}>Finalidad</th>
-            <th style={{ padding: '8px 4px' }}>Duración</th>
-            <th style={{ padding: '8px 4px' }}>Esencial</th>
+          <tr>
+            <th>Clave</th>
+            <th>Tipo</th>
+            <th>Finalidad</th>
+            <th>Duración</th>
+            <th>Esencial</th>
           </tr>
         </thead>
         <tbody>
-          <tr style={{ borderBottom: '1px solid var(--border)' }}>
-            <td style={{ padding: '8px 4px' }}><code>refreshToken</code></td>
-            <td style={{ padding: '8px 4px' }}>localStorage</td>
-            <td style={{ padding: '8px 4px' }}>Mantener la sesión iniciada en el panel (token
+          <tr>
+            <td><code>refreshToken</code></td>
+            <td>localStorage</td>
+            <td>Mantener la sesión iniciada en el panel (token
               JWT de refresco).</td>
-            <td style={{ padding: '8px 4px' }}>Persistente hasta cerrar sesión o borrar los
+            <td>Persistente hasta cerrar sesión o borrar los
               datos del navegador.</td>
-            <td style={{ padding: '8px 4px' }}>Sí (solo si inicias sesión).</td>
-          </tr>
-          <tr style={{ borderBottom: '1px solid var(--border)' }}>
-            <td style={{ padding: '8px 4px' }}><code>bookingDraft</code></td>
-            <td style={{ padding: '8px 4px' }}>sessionStorage</td>
-            <td style={{ padding: '8px 4px' }}>Conservar el borrador de la reserva mientras
-              completas los pasos.</td>
-            <td style={{ padding: '8px 4px' }}>Hasta cerrar la pestaña.</td>
-            <td style={{ padding: '8px 4px' }}>Sí (para el flujo de reserva).</td>
+            <td>Sí (solo si inicias sesión).</td>
           </tr>
           <tr>
-            <td style={{ padding: '8px 4px' }}><code>lastReserva</code></td>
-            <td style={{ padding: '8px 4px' }}>sessionStorage</td>
-            <td style={{ padding: '8px 4px' }}>Mostrar el resumen de la última cita creada en
+            <td><code>bookingDraft</code></td>
+            <td>sessionStorage</td>
+            <td>Conservar el borrador de la reserva mientras
+              completas los pasos.</td>
+            <td>Hasta cerrar la pestaña.</td>
+            <td>Sí (para el flujo de reserva).</td>
+          </tr>
+          <tr>
+            <td><code>lastReserva</code></td>
+            <td>sessionStorage</td>
+            <td>Mostrar el resumen de la última cita creada en
               la pantalla de éxito.</td>
-            <td style={{ padding: '8px 4px' }}>Hasta cerrar la pestaña.</td>
-            <td style={{ padding: '8px 4px' }}>No (funcional/UX).</td>
+            <td>Hasta cerrar la pestaña.</td>
+            <td>No (funcional/UX).</td>
           </tr>
         </tbody>
         </table>

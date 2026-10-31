@@ -91,13 +91,13 @@ export default function MyAppointments() {
   const etiquetaEstado = (r) => (porBarberia(r) ? 'Cancelada por la barbería' : estadoToLabel(r.estado));
 
   return (
-    <div style={{ maxWidth: 640, margin: '0 auto' }}>
+    <div className="narrow-page">
       <h1 className="section-title">Mis citas</h1>
-      <p style={{ textAlign: 'center', color: 'var(--muted)' }}>
+      <p className="page-lead">
         Introduce tu teléfono y el token de reserva que recibiste.
       </p>
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="card" style={{ padding: 'var(--space-md)', marginBottom: 'var(--space-lg)' }}>
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="card form-card">
         <div className="form-group">
           <Label htmlFor="telefono" required>Teléfono</Label>
           <Input
@@ -117,7 +117,7 @@ export default function MyAppointments() {
             {...register('token', { required: 'Token requerido' })}
           />
         </div>
-        <Button type="submit" variant="primary" loading={loading} style={{ width: '100%' }}>
+        <Button type="submit" variant="primary" loading={loading} className="btn-block">
           Buscar mis citas
         </Button>
       </form>
@@ -130,7 +130,22 @@ export default function MyAppointments() {
       {reservas && reservas.length > 0 && (
         <div className="reservation-list">
           {reservas.map((r) => (
-            <div key={r.id} className="reservation-card" onClick={() => setSelected(r)} style={{ cursor: 'pointer' }}>
+            /* Tarjeta clicable accesible por teclado (antes un <div> con onClick:
+               no se podía abrir el detalle sin ratón) */
+            <div
+              key={r.id}
+              className="reservation-card reservation-card--clickable"
+              role="button"
+              tabIndex={0}
+              aria-label={`Ver detalle: ${r.servicio?.nombre ?? 'cita'}, ${formatDate(r.fecha)} ${formatTime(r.horaInicio)}`}
+              onClick={() => setSelected(r)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelected(r);
+                }
+              }}
+            >
               <div className="res-time">
                 {formatDate(r.fecha)}<br />
                 <small>{formatTime(r.horaInicio)}</small>
@@ -217,7 +232,7 @@ export default function MyAppointments() {
             )}
             <div className="summary-row">
               <span className="label">Token</span>
-              <span className="value" style={{ fontSize: 'var(--font-size-xs)', wordBreak: 'break-all' }}>
+              <span className="value text-xs break-all">
                 {selected.tokenCancelacion}{' '}
                 <button
                   className="btn btn-ghost btn-sm"

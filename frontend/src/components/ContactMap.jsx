@@ -36,7 +36,6 @@ export default function ContactMap() {
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
           allowFullScreen
-          style={{ border: 0 }}
         />
       ) : (
         <div className="contact-map__placeholder">

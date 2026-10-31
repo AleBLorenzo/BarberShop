@@ -31,6 +31,15 @@ export function formatCurrency(amount) {
 }
 
 /**
+ * Format a percentage (0–100) with Spanish locale: 0.9 → «0,9 %».
+ * @param {number} value
+ */
+export function formatPercent(value) {
+  if (value == null || Number.isNaN(Number(value))) return '—';
+  return new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 }).format(value) + ' %';
+}
+
+/**
  * Get current week (Mon-Sun) as array of dates.
  * @returns {Date[]}
  */
